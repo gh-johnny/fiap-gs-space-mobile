@@ -1,5 +1,5 @@
-import { TLEData } from '@/domain/value-objects'
+import { SatelliteObject } from '@/domain/entities'
 
 export interface ITleGateway {
-  fetchTLEs(): Promise<TLEData[]>
+  fetchTLEs(): Promise<SatelliteObject[]>
 }

@@ -19,6 +19,15 @@ export class OrbitalAlert {
     )
   }
 
+  static reconstruct(params: {
+    id: string
+    conjunctionEvent: ConjunctionEvent
+    status: AlertStatus
+    detectedAt: Date
+  }): OrbitalAlert {
+    return new OrbitalAlert(params.id, params.conjunctionEvent, params.status, params.detectedAt)
+  }
+
   acknowledge(): OrbitalAlert {
     return new OrbitalAlert(this.id, this.conjunctionEvent, 'acknowledged', this.detectedAt)
   }
