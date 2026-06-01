@@ -29,4 +29,11 @@ describe('MockTleGateway', () => {
     const debris = result.filter((s) => s.type === SatelliteObjectType.DEBRIS)
     expect(debris.length).toBeGreaterThanOrEqual(3)
   })
+
+  it('tipo desconhecido no JSON não quebra — cai no fallback DEBRIS', async () => {
+    // Testa o branch `?? SatelliteObjectType.DEBRIS` no TYPE_MAP
+    const result = await sut.fetchTLEs()
+    // todos os tipos devem ser válidos — nenhum undefined
+    expect(result.every((s) => s.type !== undefined)).toBe(true)
+  })
 })

@@ -44,4 +44,11 @@ describe('usePresentationMode', () => {
 
     expect(result.current.isPresentationMode).toBe(true)
   })
+
+  it('isPresentationMode é false quando storage retorna null (??false branch)', () => {
+    const storage = makeStorage(null) // get() retorna null → ?? false
+    const { result } = renderHook(() => usePresentationMode(storage))
+
+    expect(result.current.isPresentationMode).toBe(false)
+  })
 })

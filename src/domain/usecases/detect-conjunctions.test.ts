@@ -105,4 +105,15 @@ describe('DetectConjunctions', () => {
     const eventIds = result.flatMap((e) => [e.objectA.noradId.value, e.objectB.noradId.value])
     expect(eventIds).not.toContain(3)
   })
+
+  it('ignora posições sem satélite correspondente no mapa (branch !satA || !satB)', () => {
+    const sat1 = makeSat(1)
+    // posição 99 não tem satélite no array
+    const positions = [makePos(1, 0, 0, 400), makePos(99, 0.001, 0.001, 400)]
+
+    const result = useCase.execute([sat1], positions)
+
+    // nenhum evento — o par (1, 99) não acha satélite para id=99
+    expect(result).toHaveLength(0)
+  })
 })

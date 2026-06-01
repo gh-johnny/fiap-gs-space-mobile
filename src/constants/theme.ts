@@ -24,6 +24,33 @@ export const Colors = {
   },
 } as const;
 
+export const OrbitalColors = {
+  background: '#000814',
+
+  alert: {
+    critical: '#FF3B30',
+    warning: '#FF9500',
+    info:     '#34C759',
+  },
+
+  satellite:       '#00E5FF',
+  debris:          '#FF9500',
+  rocketBody:      '#FF6B35',
+  conjunctionLine: '#FF3B30',
+
+  glass: {
+    background: 'rgba(255,255,255,0.06)',
+    border:     'rgba(255,255,255,0.12)',
+    strong:     'rgba(255,255,255,0.10)',
+  },
+
+  text: {
+    primary:   '#FFFFFF',
+    secondary: 'rgba(255,255,255,0.60)',
+    tertiary:  'rgba(255,255,255,0.35)',
+  },
+} as const;
+
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = Platform.select({

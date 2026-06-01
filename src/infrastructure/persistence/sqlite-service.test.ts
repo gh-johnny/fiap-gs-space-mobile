@@ -55,4 +55,13 @@ describe('SqliteService', () => {
       .filter((sql) => sql.includes('PRAGMA user_version'))
     expect(pragmaCalls.length).toBeGreaterThan(0)
   })
+
+  it('initialize() usa version 0 quando getFirstSync retorna null (??0 branch)', () => {
+    mockGetFirstSync.mockReturnValue(null) // ?? 0 branch
+    const sut = new SqliteService()
+    expect(() => sut.initialize()).not.toThrow()
+    // deve ainda criar a tabela
+    const calls = mockExecSync.mock.calls.map((c) => c[0] as string)
+    expect(calls.some((sql) => sql.includes('CREATE TABLE'))).toBe(true)
+  })
 })

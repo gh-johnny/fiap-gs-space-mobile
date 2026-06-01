@@ -39,6 +39,13 @@ describe('TLEData', () => {
       const tle = TLEData.create(oldLine1.padEnd(69), VALID_LINE2)
       expect(tle.isExpired()).toBe(true)
     })
+
+    it('interpreta epoch year >= 57 como século 1900 (satélites históricos)', () => {
+      // epoch 98001.00000000 = 1 jan 1998 — mais de 14 dias atrás, logo expirado
+      const l1 = '1 44713U 19074A   98001.00000000  .00000078  00000-0  24334-4 0  9993'
+      const tle = TLEData.create(l1.padEnd(69), VALID_LINE2)
+      expect(tle.isExpired()).toBe(true)
+    })
   })
 })
 

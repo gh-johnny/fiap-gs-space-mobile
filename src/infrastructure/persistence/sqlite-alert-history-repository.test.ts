@@ -120,4 +120,24 @@ describe('SqliteAlertHistoryRepository', () => {
       expect(result.every((a) => a.status === 'acknowledged')).toBe(true)
     })
   })
+
+  describe('findAll com rows malformadas', () => {
+    it('ignora rows com JSON inválido (catch→null branch)', async () => {
+      const badRow: SqliteAlertRowExternal = {
+        id: 'bad',
+        conjunction_event_json: 'NOT_VALID_JSON{{{',
+        status: 'detected',
+        detected_at: new Date().toISOString(),
+      }
+      const good = makeAlert()
+      const service = makeSqliteService([badRow, makeRow(good)])
+      const sut = new SqliteAlertHistoryRepository(service)
+
+      const result = await sut.findAll()
+
+      // apenas a row válida é retornada
+      expect(result).toHaveLength(1)
+      expect(result[0]!.id).toBe(good.id)
+    })
+  })
 })

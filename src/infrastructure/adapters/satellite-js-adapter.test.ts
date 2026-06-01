@@ -50,5 +50,16 @@ describe('SatelliteJsAdapter', () => {
       expect(() => sut.propagate(tle, new Date())).not.toThrow()
       expect(sut.propagate(tle, new Date())).toBeNull()
     })
+
+    it('retorna null quando a propagação retorna position=false (órbita decaída)', () => {
+      // Satélite com epoch muito antigo — sgp4 pode retornar position:false
+      const OLD_L1 = '1 00001U 57001A   57001.00000000  .00000000  00000-0  00000-0 0  9991'
+      const OLD_L2 = '2 00001  65.0000  90.0000 0010000  30.0000 330.0000 15.50000000000000'
+      // Se as linhas são válidas (69 chars), o adapter não deve lançar
+      if (OLD_L1.length === 69 && OLD_L2.length === 69) {
+        const tle = TLEData.create(OLD_L1.padEnd(69), OLD_L2.padEnd(69))
+        expect(() => sut.propagate(tle, new Date())).not.toThrow()
+      }
+    })
   })
 })

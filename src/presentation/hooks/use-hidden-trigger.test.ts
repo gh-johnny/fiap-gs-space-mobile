@@ -71,4 +71,18 @@ describe('useHiddenTrigger', () => {
 
     expect(onTrigger).not.toHaveBeenCalled()
   })
+
+  it('usa valores padrão (requiredTaps=5, windowMs=1500) quando não passados', () => {
+    const onTrigger = jest.fn()
+    // sem requiredTaps nem windowMs — usa defaults
+    const { result } = renderHook(() =>
+      useHiddenTrigger({ onTrigger, screenWidth: 375, screenHeight: 812 }),
+    )
+
+    act(() => {
+      tap(result.current.onTap, 5, true) // 5 = default requiredTaps
+    })
+
+    expect(onTrigger).toHaveBeenCalledTimes(1)
+  })
 })
