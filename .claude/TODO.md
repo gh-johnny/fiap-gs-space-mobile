@@ -36,43 +36,13 @@
 
 ---
 
-## Fase 6 — Entidade: SatelliteObject
+## Fases 6–8 — Entidades de domínio ✅
 
-- [ ] Criar `src/domain/entities/satellite-object.test.ts` — `pending`
-- [ ] Teste: `SatelliteObject.create(validParams)` retorna instância com todas as props — `pending`
-- [ ] Teste: `create` com `name` vazio lança erro — `pending`
-- [ ] Teste: instância é imutável (props `readonly`) — `pending`
-- [ ] Definir enum `SatelliteObjectType`: `OPERATIONAL_SATELLITE`, `DEBRIS`, `ROCKET_BODY` — `pending`
-- [ ] Criar `src/domain/entities/satellite-object.ts` com `private constructor` e `static create()` — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
-
----
-
-## Fase 7 — Entidade: ConjunctionEvent
-
-- [ ] Criar `src/domain/entities/conjunction-event.test.ts` — `pending`
-- [ ] Teste: `ConjunctionEvent.create(validParams)` retorna instância — `pending`
-- [ ] Teste: `isActive()` → `true` quando `tcpa.actionWindowIsOpen()` é `true` — `pending`
-- [ ] Teste: `isActive()` → `false` quando janela fechada — `pending`
-- [ ] Teste: `severity` é derivada corretamente de `Pc` + `MissDistance` — `pending`
-- [ ] Criar `src/domain/entities/conjunction-event.ts` com `private constructor` e `static create()` — `pending`
-- [ ] Implementar `isActive(): boolean` delegando para `tcpa.actionWindowIsOpen()` — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
-
----
-
-## Fase 8 — Entidade: OrbitalAlert
-
-- [ ] Criar `src/domain/entities/orbital-alert.test.ts` — `pending`
-- [ ] Teste: `OrbitalAlert.create(event)` retorna com `status: 'detected'` e `detectedAt` próximo de `now` — `pending`
-- [ ] Teste: `acknowledge()` retorna **nova** instância com `status: 'acknowledged'` (imutabilidade) — `pending`
-- [ ] Teste: `dismiss()` retorna **nova** instância com `status: 'dismissed'` (imutabilidade) — `pending`
-- [ ] Teste: `acknowledge()` da instância original não altera `status` original — `pending`
-- [ ] Definir tipo `AlertStatus = 'detected' | 'acknowledged' | 'dismissed'` — `pending`
-- [ ] Criar `src/domain/entities/orbital-alert.ts` com `private constructor` e `static create()` — `pending`
-- [ ] Implementar `acknowledge()` e `dismiss()` retornando novas instâncias imutáveis — `pending`
-- [ ] Criar `src/domain/entities/index.ts` — re-exporta entidades e tipos — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
+- [x] `satellite-object.ts` + 4 testes (create, nome vazio, readonly) — `done`
+- [x] `conjunction-event.ts` + 4 testes (create, severity, isActive) — `done`
+- [x] `orbital-alert.ts` + 7 testes (create, acknowledge imutável, dismiss imutável) — `done`
+- [x] `entities/index.ts` — re-exporta entidades e tipos — `done`
+- [x] 15 testes passando — `done`
 
 ---
 
