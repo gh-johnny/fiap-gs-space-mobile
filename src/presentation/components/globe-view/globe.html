@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbital Guardian Globe</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: transparent; overflow: hidden; width: 100vw; height: 100vh; }
+    #globe { width: 100%; height: 100%; }
+    #overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0);
+      pointer-events: none;
+      transition: background 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="globe"></div>
+  <div id="overlay"></div>
+
+  <script src="https://unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
+  <script>
+    const POINT_COLORS = {
+      OPERATIONAL_SATELLITE: '#00E5FF',
+      DEBRIS: '#FF9500',
+      ROCKET_BODY: '#FF6B35',
+    };
+
+    const world = Globe()
+      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+      .backgroundColor('rgba(0,0,0,0)')
+      .atmosphereColor('#1a6ecd')
+      .atmosphereAltitude(0.18)
+      .pointAltitude('alt')
+      .pointColor('color')
+      .pointRadius('radius')
+      .pointLabel('label')
+      .arcColor('color')
+      .arcStroke('stroke')
+      .arcDashLength(0.4)
+      .arcDashGap(0.15)
+      .arcDashAnimateTime(2000)(document.getElementById('globe'));
+
+    world.controls().autoRotate = true;
+    world.controls().autoRotateSpeed = 0.4;
+    world.controls().enableZoom = false;
+
+    let pointsData = [];
+    let arcsData = [];
+
+    function render() {
+      world.pointsData(pointsData);
+      world.arcsData(arcsData);
+    }
+
+    window.handleGlobeCommand = function (msg) {
+      switch (msg.type) {
+        case 'UPDATE_POSITIONS':
+          pointsData = (msg.payload || []).map(p => ({
+            lat: p.lat, lng: p.lng, alt: Math.min(p.alt / 6371, 0.15),
+            color: POINT_COLORS[p.color] || POINT_COLORS.OPERATIONAL_SATELLITE,
+            radius: 0.3,
+            label: String(p.noradId),
+          }));
+          render();
+          break;
+
+        case 'HIGHLIGHT_CONJUNCTION': {
+          const { noradIdA, noradIdB, arc } = msg.payload;
+          const posA = pointsData.find(p => String(p.label) === String(noradIdA));
+          const posB = pointsData.find(p => String(p.label) === String(noradIdB));
+          if (posA && posB) {
+            arcsData = [{
+              startLat: posA.lat, startLng: posA.lng,
+              endLat: posB.lat, endLng: posB.lng,
+              color: arc.color, stroke: arc.stroke,
+            }];
+            pointsData = pointsData.map(p =>
+              String(p.label) === String(noradIdA) || String(p.label) === String(noradIdB)
+                ? { ...p, radius: 0.6, color: '#FF3B30' }
+                : p
+            );
+          }
+          render();
+          break;
+        }
+
+        case 'CLEAR_HIGHLIGHT':
+          arcsData = [];
+          render();
+          break;
+
+        case 'DIM_GLOBE':
+          document.getElementById('overlay').style.background =
+            'rgba(0,0,0,' + (msg.payload.opacity ?? 0.5) + ')';
+          break;
+
+        case 'UNDIM_GLOBE':
+          document.getElementById('overlay').style.background = 'rgba(0,0,0,0)';
+          break;
+      }
+    };
+
+    window.addEventListener('message', function (event) {
+      try {
+        const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        window.handleGlobeCommand(msg);
+      } catch (_) {}
+    });
+  </script>
+</body>
+</html>
