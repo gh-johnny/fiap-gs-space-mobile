@@ -24,69 +24,15 @@
 
 ---
 
-## Fase 1 — Value Object: NoradId
+## Fases 1–5 — Value Objects ✅
 
-- [ ] Criar `src/domain/value-objects/norad-id.test.ts` — testes primeiro — `pending`
-- [ ] Teste: `NoradId.create(44713)` retorna instância — `pending`
-- [ ] Teste: `NoradId.create(0)` lança erro — `pending`
-- [ ] Teste: `NoradId.create(-1)` lança erro — `pending`
-- [ ] Teste: `NoradId.create(1.5)` lança erro (não inteiro) — `pending`
-- [ ] Teste: `noradId.toString()` retorna `"44713"` — `pending`
-- [ ] Criar `src/domain/value-objects/norad-id.ts` com `private constructor` e `static create()` — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
-
----
-
-## Fase 2 — Value Object: TLEData
-
-- [ ] Criar `src/domain/value-objects/tle-data.test.ts` — `pending`
-- [ ] Teste: `TLEData.create(validLine1, validLine2)` retorna instância — `pending`
-- [ ] Teste: `create` lança erro com linhas de tamanho incorreto (≠ 69 chars) — `pending`
-- [ ] Teste: `isExpired()` retorna `false` para epoch recente — `pending`
-- [ ] Teste: `isExpired()` retorna `true` para epoch > 14 dias atrás — `pending`
-- [ ] Criar `src/domain/value-objects/tle-data.ts` com `private constructor` e `static create()` — `pending`
-- [ ] Implementar `isExpired()` extraindo epoch da `line1` — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
-
----
-
-## Fase 3 — Value Object: ProbabilityOfCollision
-
-- [ ] Criar `src/domain/value-objects/probability-of-collision.test.ts` — `pending`
-- [ ] Teste: `create(1.4e-3)` retorna instância — `pending`
-- [ ] Teste: `create(-0.1)` lança erro — `pending`
-- [ ] Teste: `create(1.1)` lança erro — `pending`
-- [ ] Teste: `exceedsThreshold()` → `true` para `1e-3`, `false` para `1e-5` — `pending`
-- [ ] Teste: `toSeverity()` → `'CRITICAL'` para `1e-3`, `'WARNING'` para `5e-5`, `'INFO'` para `1e-6` — `pending`
-- [ ] Teste: `toScientificNotation()` → `"1.4 × 10⁻³"` para `1.4e-3` — `pending`
-- [ ] Criar `src/domain/value-objects/probability-of-collision.ts` — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
-
----
-
-## Fase 4 — Value Object: MissDistance
-
-- [ ] Criar `src/domain/value-objects/miss-distance.test.ts` — `pending`
-- [ ] Teste: `create(847)` retorna instância — `pending`
-- [ ] Teste: `create(-1)` lança erro — `pending`
-- [ ] Teste: `isDangerous()` → `true` para `< 5000`, `false` para `≥ 5000` — `pending`
-- [ ] Teste: `isCritical()` → `true` para `< 1000`, `false` para `≥ 1000` — `pending`
-- [ ] Teste: `toDisplayString()` → `"847m"` para `847`, `"2.3km"` para `2300` — `pending`
-- [ ] Criar `src/domain/value-objects/miss-distance.ts` — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
-
----
-
-## Fase 5 — Value Object: TimeToClosestApproach
-
-- [ ] Criar `src/domain/value-objects/time-to-closest-approach.test.ts` — `pending`
-- [ ] Teste: `create(futureDate)` retorna instância — `pending`
-- [ ] Teste: `actionWindowIsOpen()` → `true` quando TCPA > 4h, `false` quando ≤ 4h — `pending`
-- [ ] Teste: `toDisplayString()` → `"4h 23min"` — `pending`
-- [ ] Teste: `toUtcString()` → string formato `"até HH:MM UTC"` — `pending`
-- [ ] Criar `src/domain/value-objects/time-to-closest-approach.ts` — `pending`
-- [ ] Criar `src/domain/value-objects/index.ts` — re-exporta todos os value objects — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
+- [x] `norad-id.ts` + 7 testes — `done`
+- [x] `tle-data.ts` + testes (create + isExpired) — `done`
+- [x] `probability-of-collision.ts` + testes (create, exceedsThreshold, toSeverity, toScientificNotation) — `done`
+- [x] `miss-distance.ts` + testes (create, isDangerous, isCritical, toDisplayString) — `done`
+- [x] `time-to-closest-approach.ts` + testes (create, actionWindowIsOpen, toDisplayString, toUtcString) — `done`
+- [x] `index.ts` — re-exporta todos os value objects — `done`
+- [x] 44 testes passando — `done`
 
 ---
 
