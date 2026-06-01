@@ -1,0 +1,430 @@
+# Todo List
+
+> Plan: Orbital Guardian Mobile — Clean Architecture, SGP4, globe.gl, SQLite, TDD ≥90%, demo-ready FIAP GS 2026
+> Mode: careful
+> Created: 2026-06-01
+
+---
+
+## Fase 0 — Setup do projeto ✅
+
+- [x] Instalar runtime: `npx expo install expo-haptics expo-blur expo-sqlite zod react-native-mmkv zustand` — `done`
+- [x] Instalar `satellite.js`: `npm install satellite.js` — `done`
+- [x] Instalar devDeps: `jest-expo @testing-library/react-native @types/jest @react-native/jest-preset jest` — `done` (sem @types/satellite.js — lib tem tipos próprios)
+- [x] Criar `jest.config.js` com preset `jest-expo` e configurações de cobertura — `done`
+- [x] Configurar `coverageThreshold`: `lines: 90, functions: 90, branches: 90` — `done`
+- [x] Configurar `coveragePathIgnorePatterns` — `done`
+- [x] Adicionar scripts `"test"` e `"test:coverage"` ao `package.json` — `done`
+- [x] Habilitar `strictNullChecks: true`, `noUncheckedIndexedAccess: true` no `tsconfig.json` — `done`
+- [x] Criar todas as pastas: `domain/{entities,value-objects,repositories,gateways,usecases}` — `done`
+- [x] Criar todas as pastas: `infrastructure/{adapters,gateways,repositories,persistence}` — `done`
+- [x] Criar todas as pastas: `application/{container,config,stores}` — `done`
+- [x] Criar todas as pastas: `presentation/{screens,components,hooks}` — `done`
+- [x] Criar pastas: `data/`, `shared/{types,utils}` — `done`
+
+---
+
+## Fase 1 — Value Object: NoradId
+
+- [ ] Criar `src/domain/value-objects/norad-id.test.ts` — testes primeiro — `pending`
+- [ ] Teste: `NoradId.create(44713)` retorna instância — `pending`
+- [ ] Teste: `NoradId.create(0)` lança erro — `pending`
+- [ ] Teste: `NoradId.create(-1)` lança erro — `pending`
+- [ ] Teste: `NoradId.create(1.5)` lança erro (não inteiro) — `pending`
+- [ ] Teste: `noradId.toString()` retorna `"44713"` — `pending`
+- [ ] Criar `src/domain/value-objects/norad-id.ts` com `private constructor` e `static create()` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 2 — Value Object: TLEData
+
+- [ ] Criar `src/domain/value-objects/tle-data.test.ts` — `pending`
+- [ ] Teste: `TLEData.create(validLine1, validLine2)` retorna instância — `pending`
+- [ ] Teste: `create` lança erro com linhas de tamanho incorreto (≠ 69 chars) — `pending`
+- [ ] Teste: `isExpired()` retorna `false` para epoch recente — `pending`
+- [ ] Teste: `isExpired()` retorna `true` para epoch > 14 dias atrás — `pending`
+- [ ] Criar `src/domain/value-objects/tle-data.ts` com `private constructor` e `static create()` — `pending`
+- [ ] Implementar `isExpired()` extraindo epoch da `line1` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 3 — Value Object: ProbabilityOfCollision
+
+- [ ] Criar `src/domain/value-objects/probability-of-collision.test.ts` — `pending`
+- [ ] Teste: `create(1.4e-3)` retorna instância — `pending`
+- [ ] Teste: `create(-0.1)` lança erro — `pending`
+- [ ] Teste: `create(1.1)` lança erro — `pending`
+- [ ] Teste: `exceedsThreshold()` → `true` para `1e-3`, `false` para `1e-5` — `pending`
+- [ ] Teste: `toSeverity()` → `'CRITICAL'` para `1e-3`, `'WARNING'` para `5e-5`, `'INFO'` para `1e-6` — `pending`
+- [ ] Teste: `toScientificNotation()` → `"1.4 × 10⁻³"` para `1.4e-3` — `pending`
+- [ ] Criar `src/domain/value-objects/probability-of-collision.ts` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 4 — Value Object: MissDistance
+
+- [ ] Criar `src/domain/value-objects/miss-distance.test.ts` — `pending`
+- [ ] Teste: `create(847)` retorna instância — `pending`
+- [ ] Teste: `create(-1)` lança erro — `pending`
+- [ ] Teste: `isDangerous()` → `true` para `< 5000`, `false` para `≥ 5000` — `pending`
+- [ ] Teste: `isCritical()` → `true` para `< 1000`, `false` para `≥ 1000` — `pending`
+- [ ] Teste: `toDisplayString()` → `"847m"` para `847`, `"2.3km"` para `2300` — `pending`
+- [ ] Criar `src/domain/value-objects/miss-distance.ts` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 5 — Value Object: TimeToClosestApproach
+
+- [ ] Criar `src/domain/value-objects/time-to-closest-approach.test.ts` — `pending`
+- [ ] Teste: `create(futureDate)` retorna instância — `pending`
+- [ ] Teste: `actionWindowIsOpen()` → `true` quando TCPA > 4h, `false` quando ≤ 4h — `pending`
+- [ ] Teste: `toDisplayString()` → `"4h 23min"` — `pending`
+- [ ] Teste: `toUtcString()` → string formato `"até HH:MM UTC"` — `pending`
+- [ ] Criar `src/domain/value-objects/time-to-closest-approach.ts` — `pending`
+- [ ] Criar `src/domain/value-objects/index.ts` — re-exporta todos os value objects — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 6 — Entidade: SatelliteObject
+
+- [ ] Criar `src/domain/entities/satellite-object.test.ts` — `pending`
+- [ ] Teste: `SatelliteObject.create(validParams)` retorna instância com todas as props — `pending`
+- [ ] Teste: `create` com `name` vazio lança erro — `pending`
+- [ ] Teste: instância é imutável (props `readonly`) — `pending`
+- [ ] Definir enum `SatelliteObjectType`: `OPERATIONAL_SATELLITE`, `DEBRIS`, `ROCKET_BODY` — `pending`
+- [ ] Criar `src/domain/entities/satellite-object.ts` com `private constructor` e `static create()` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 7 — Entidade: ConjunctionEvent
+
+- [ ] Criar `src/domain/entities/conjunction-event.test.ts` — `pending`
+- [ ] Teste: `ConjunctionEvent.create(validParams)` retorna instância — `pending`
+- [ ] Teste: `isActive()` → `true` quando `tcpa.actionWindowIsOpen()` é `true` — `pending`
+- [ ] Teste: `isActive()` → `false` quando janela fechada — `pending`
+- [ ] Teste: `severity` é derivada corretamente de `Pc` + `MissDistance` — `pending`
+- [ ] Criar `src/domain/entities/conjunction-event.ts` com `private constructor` e `static create()` — `pending`
+- [ ] Implementar `isActive(): boolean` delegando para `tcpa.actionWindowIsOpen()` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 8 — Entidade: OrbitalAlert
+
+- [ ] Criar `src/domain/entities/orbital-alert.test.ts` — `pending`
+- [ ] Teste: `OrbitalAlert.create(event)` retorna com `status: 'detected'` e `detectedAt` próximo de `now` — `pending`
+- [ ] Teste: `acknowledge()` retorna **nova** instância com `status: 'acknowledged'` (imutabilidade) — `pending`
+- [ ] Teste: `dismiss()` retorna **nova** instância com `status: 'dismissed'` (imutabilidade) — `pending`
+- [ ] Teste: `acknowledge()` da instância original não altera `status` original — `pending`
+- [ ] Definir tipo `AlertStatus = 'detected' | 'acknowledged' | 'dismissed'` — `pending`
+- [ ] Criar `src/domain/entities/orbital-alert.ts` com `private constructor` e `static create()` — `pending`
+- [ ] Implementar `acknowledge()` e `dismiss()` retornando novas instâncias imutáveis — `pending`
+- [ ] Criar `src/domain/entities/index.ts` — re-exporta entidades e tipos — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 9 — Interfaces de Domínio
+
+- [ ] Criar `src/domain/repositories/i-satellite-repository.ts` — `findAll(): Promise<SatelliteObject[]>` — `pending`
+- [ ] Criar `src/domain/repositories/i-conjunction-repository.ts` — `findAll()`, `findBySeverity(s: Severity)` — `pending`
+- [ ] Criar `src/domain/repositories/i-alert-history-repository.ts` — `save(a: OrbitalAlert)`, `findAll()`, `findByStatus(s: AlertStatus)` — `pending`
+- [ ] Criar `src/domain/repositories/index.ts` — `pending`
+- [ ] Criar `src/domain/gateways/i-tle-gateway.ts` — `fetchTLEs(): Promise<TLEData[]>` — `pending`
+- [ ] Criar `src/domain/gateways/i-storage-gateway.ts` — `get<T>`, `set<T>`, `remove` — `pending`
+- [ ] Criar `src/domain/gateways/i-haptics-gateway.ts` — `warn()`, `impact()` — `pending`
+- [ ] Criar `src/domain/gateways/index.ts` — `pending`
+
+---
+
+## Fase 10 — Use Case: PropagateOrbits
+
+- [ ] Criar `src/domain/usecases/propagate-orbits.test.ts` — `pending`
+- [ ] Criar mock de `ISatelliteJsAdapter` — `pending`
+- [ ] Teste: `execute([satellite], date)` chama adapter para cada satélite — `pending`
+- [ ] Teste: posições `null` do adapter são filtradas — `pending`
+- [ ] Teste: retorna `OrbitPosition[]` com `noradId`, `lat`, `lng`, `alt` válidos — `pending`
+- [ ] Definir interface `OrbitPosition` em `src/domain/usecases/propagate-orbits.ts` — `pending`
+- [ ] Criar `PropagateOrbits` com `ISatelliteJsAdapter` injetado — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 11 — Use Case: DetectConjunctions
+
+- [ ] Criar `src/domain/usecases/detect-conjunctions.test.ts` — `pending`
+- [ ] Teste: dois objetos a `< 50km` geram um `ConjunctionEvent` — `pending`
+- [ ] Teste: dois objetos a `> 50km` não geram evento — `pending`
+- [ ] Teste: 3 objetos onde 2 estão próximos retorna 1 evento — `pending`
+- [ ] Teste: eventos ordenados CRITICAL → WARNING → INFO — `pending`
+- [ ] Criar `DetectConjunctions` com `execute(positions: OrbitPosition[]): ConjunctionEvent[]` — `pending`
+- [ ] Calcular distância 3D entre todos os pares — `pending`
+- [ ] Filtrar pares com distância `< MAX_CONJUNCTION_DISTANCE_KM (50)` — `pending`
+- [ ] Criar `ConjunctionEvent` para cada par com Pc e MissDistance proporcionais à distância — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 12 — Use Case: ClassifyRisk
+
+- [ ] Criar `src/domain/usecases/classify-risk.test.ts` — `pending`
+- [ ] Teste: `MissDistance.isCritical()` → `'CRITICAL'` independente do Pc — `pending`
+- [ ] Teste: `Pc > 1e-4` com `MissDistance` não crítica → `'CRITICAL'` — `pending`
+- [ ] Teste: `Pc` entre `1e-5..1e-4` → `'WARNING'` — `pending`
+- [ ] Teste: `Pc ≤ 1e-5` → `'INFO'` — `pending`
+- [ ] Criar `ClassifyRisk` com `execute(pc, miss): Severity` — `pending`
+- [ ] Regra: `isCritical()` tem precedência sobre Pc — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 13 — Use Case: AcknowledgeAlert
+
+- [ ] Criar `src/domain/usecases/acknowledge-alert.test.ts` — `pending`
+- [ ] Criar mock de `IStorageGateway` — `pending`
+- [ ] Criar mock de `IAlertHistoryRepository` — `pending`
+- [ ] Teste: `execute(alert)` retorna `OrbitalAlert` com `status: 'acknowledged'` — `pending`
+- [ ] Teste: `execute` chama `storageGateway.set` com chave correta — `pending`
+- [ ] Teste: `execute` chama `alertHistoryRepository.save` com o alert atualizado — `pending`
+- [ ] Teste: retorno é nova instância (imutabilidade garantida) — `pending`
+- [ ] Criar `AcknowledgeAlert` injetando `IStorageGateway` e `IAlertHistoryRepository` — `pending`
+- [ ] Criar `src/domain/usecases/index.ts` — re-exporta use cases e `OrbitPosition` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 14 — Tipos Externos (Anti-Corruption Layer)
+
+- [ ] Criar `src/infrastructure/adapters/satellite-js-external-types.ts` — `SatRecExternal`, `EciVec3External`, `GeodeticVec3External` — `pending`
+- [ ] Criar `src/infrastructure/adapters/globe-gl-external-types.ts` — `GlobePointData`, `GlobeArcData` — `pending`
+- [ ] Criar `src/infrastructure/gateways/tle-record-external.ts` — `TleRecordExternal` espelhando formato do `tles.json` — `pending`
+- [ ] Criar `src/infrastructure/persistence/sqlite-external-types.ts` — `SqliteResultRowExternal` com campos do schema — `pending`
+
+---
+
+## Fase 15 — Adapter: SatelliteJsAdapter
+
+- [ ] Criar `src/infrastructure/adapters/i-satellite-js-adapter.ts` — `propagate(tle: TLEData, ts: Date): OrbitPosition | null` — `pending`
+- [ ] Criar `src/infrastructure/adapters/satellite-js-adapter.test.ts` — `pending`
+- [ ] Criar fixture de `TLEData` válido com dados reais de satélite — `pending`
+- [ ] Teste: `propagate(validTle, now)` retorna `OrbitPosition` com lat/lng/alt numéricos — `pending`
+- [ ] Teste: `lat` entre -90 e 90, `lng` entre -180 e 180 — `pending`
+- [ ] Teste: `propagate` com TLE inválido retorna `null` sem lançar — `pending`
+- [ ] Criar `src/infrastructure/adapters/satellite-js-adapter.ts` implementando a interface — `pending`
+- [ ] Chamar `twoline2satrec` — tipar resultado como `SatRecExternal` — `pending`
+- [ ] Chamar `propagate(satrec, date)` — tratar erro retornando `null` — `pending`
+- [ ] Converter `EciVec3External` → geodésico com `eciToGeodetic()` — `pending`
+- [ ] Converter radianos → graus para lat/lng — `pending`
+- [ ] Criar `src/infrastructure/adapters/index.ts` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 16 — Adapter: GlobeGlAdapter
+
+- [ ] Criar `src/infrastructure/adapters/i-globe-gl-adapter.ts` — interface com `updatePositions`, `highlightConjunction`, `clearHighlight`, `dimGlobe`, `undimGlobe` — `pending`
+- [ ] Criar `src/infrastructure/adapters/globe-gl-adapter.ts` implementando a interface — `pending`
+- [ ] Receber `RefObject<WebView>` no construtor — `pending`
+- [ ] Implementar `updatePositions(positions)` — converter `OrbitPosition[]` → `GlobePointData[]` e enviar postMessage — `pending`
+- [ ] Implementar `highlightConjunction(event)` — enviar noradIds e cor `#FF3B30` — `pending`
+- [ ] Implementar `clearHighlight()` — resetar arcos — `pending`
+- [ ] Implementar `dimGlobe(opacity)` e `undimGlobe()` — comandos de overlay — `pending`
+- [ ] Confirmar arquivos no `index.ts` — `pending`
+
+---
+
+## Fase 17 — Gateways de Infraestrutura
+
+- [ ] Criar `src/data/tles.json` com ~50 TLEs reais (Starlink, ISS, Hubble, Landsat-8, Sentinel-2) — `pending`
+- [ ] Incluir 3 entradas `type: "DEBRIS"` e 1 `type: "ROCKET_BODY"` — `pending`
+- [ ] Criar `src/infrastructure/gateways/mock-tle-gateway.test.ts` — `pending`
+- [ ] Teste: `fetchTLEs()` retorna array não vazio — `pending`
+- [ ] Teste: todos os `TLEData` têm `line1` e `line2` válidos — `pending`
+- [ ] Criar `src/infrastructure/gateways/mock-tle-gateway.ts` — importa JSON, mapeia `TleRecordExternal[]` → `TLEData.create()` — `pending`
+- [ ] Criar `src/infrastructure/gateways/mmkv-storage-gateway.ts` — `pending`
+- [ ] Implementar `get<T>`, `set<T>`, `remove` via `MMKV` instance — `pending`
+- [ ] Criar `src/infrastructure/gateways/expo-haptics-gateway.ts` — `pending`
+- [ ] Implementar `warn()` e `impact()` via `expo-haptics` — `pending`
+- [ ] Criar `src/infrastructure/gateways/index.ts` — `pending`
+- [ ] Confirmar testes dos gateways testáveis passam — `pending`
+
+---
+
+## Fase 18 — Repositórios Mock
+
+- [ ] Criar `src/infrastructure/repositories/mock-satellite-repository.test.ts` — `pending`
+- [ ] Criar mock de `ITleGateway` — `pending`
+- [ ] Teste: `findAll()` retorna array não vazio de `SatelliteObject` — `pending`
+- [ ] Teste: cada objeto tem `noradId`, `name`, `type`, `tleData` válidos — `pending`
+- [ ] Criar `src/infrastructure/repositories/mock-satellite-repository.ts` — injetar `ITleGateway` — `pending`
+- [ ] Implementar `findAll()` mapeando TLEs para `SatelliteObject.create()` — `pending`
+- [ ] Criar `src/infrastructure/repositories/mock-conjunction-repository.test.ts` — `pending`
+- [ ] Teste: `findAll()` retorna 3 eventos (1 CRITICAL, 1 WARNING, 1 INFO) — `pending`
+- [ ] Teste: `findBySeverity('CRITICAL')` retorna só críticos — `pending`
+- [ ] Criar `src/infrastructure/repositories/mock-conjunction-repository.ts` — `pending`
+- [ ] Definir 3 conjunções hardcoded com dados realistas via static factories — `pending`
+- [ ] Criar `src/infrastructure/repositories/index.ts` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 19 — SQLite: SqliteService
+
+- [ ] Criar `src/infrastructure/persistence/sqlite-service.test.ts` — `pending`
+- [ ] Teste: `initialize()` cria a tabela `orbital_alerts` se não existir — `pending`
+- [ ] Teste: `initialize()` é idempotente (executar duas vezes não quebra) — `pending`
+- [ ] Teste: versão de migration é registrada corretamente — `pending`
+- [ ] Criar `src/infrastructure/persistence/sqlite-service.ts` — `pending`
+- [ ] Abrir DB via `SQLite.openDatabaseSync('orbital-guardian.db')` — `pending`
+- [ ] Definir array `MIGRATIONS: Migration[]` com v1: `CREATE TABLE IF NOT EXISTS orbital_alerts (...)` — `pending`
+- [ ] Implementar `initialize()` executando migrations pendentes — `pending`
+- [ ] Implementar `getDb()` retornando a conexão após inicialização — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 20 — SQLite: SqliteAlertHistoryRepository
+
+- [ ] Criar `src/infrastructure/persistence/sqlite-alert-history-repository.test.ts` — `pending`
+- [ ] Criar mock de `SqliteService` para os testes — `pending`
+- [ ] Teste: `save(detectedAlert)` persiste registro no banco — `pending`
+- [ ] Teste: `save(acknowledgedAlert)` persiste com `status: 'acknowledged'` — `pending`
+- [ ] Teste: `findAll()` retorna `OrbitalAlert[]` reconstruídos com static factories — `pending`
+- [ ] Teste: `findByStatus('acknowledged')` retorna só alertas com esse status — `pending`
+- [ ] Teste: `findAll()` retorna lista ordenada por `detected_at DESC` — `pending`
+- [ ] Criar `src/infrastructure/persistence/sqlite-alert-history-repository.ts` implementando `IAlertHistoryRepository` — `pending`
+- [ ] Injetar `SqliteService` no construtor — `pending`
+- [ ] Implementar `save(alert)` — serializar `OrbitalAlert` para row usando `SqliteResultRowExternal` — `pending`
+- [ ] Implementar `findAll()` — buscar rows, reconstruir `OrbitalAlert` via static factories — `pending`
+- [ ] Implementar `findByStatus(status)` — query com `WHERE status = ?` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 21 — Application: Config e DI Container
+
+- [ ] Criar `src/application/config/env.ts` — schema Zod: `APP_ENV`, `GLOBE_UPDATE_INTERVAL_MS`, `HIDDEN_TRIGGER_TAPS` — `pending`
+- [ ] Chamar `schema.parse(process.env)` e exportar `env` tipado — `pending`
+- [ ] Criar `.env` com valores de desenvolvimento — `pending`
+- [ ] Criar `src/application/container/container.ts` — instanciar na ordem correta (adapters → gateways → services → repositories → usecases) — `pending`
+- [ ] Instanciar `SqliteService` e chamar `initialize()` no startup — `pending`
+- [ ] Instanciar `SqliteAlertHistoryRepository(sqliteService)` — `pending`
+- [ ] Instanciar `AcknowledgeAlert(storageGateway, alertHistoryRepository)` — `pending`
+- [ ] Exportar `container as const` e tipo `Container` — `pending`
+- [ ] Criar `src/application/container/container-context.tsx` com `ContainerProvider` — `pending`
+- [ ] Criar `src/presentation/hooks/use-di.ts`: `useDI<K extends keyof Container>(key: K)` — `pending`
+- [ ] Adicionar `ContainerProvider` no `src/app/_layout.tsx` — `pending`
+
+---
+
+## Fase 22 — Application: Zustand Stores
+
+- [ ] Criar `src/application/stores/use-orbital-store.test.ts` — `pending`
+- [ ] Criar mocks de `ISatelliteRepository` e `PropagateOrbits` — `pending`
+- [ ] Teste: `loadSatellites()` popula `satellites` — `pending`
+- [ ] Teste: `propagatePositions(now)` popula `positions` — `pending`
+- [ ] Teste: `isLoading` é `true` durante e `false` após carregamento — `pending`
+- [ ] Criar `src/application/stores/use-orbital-store.ts` — `pending`
+- [ ] Criar `src/application/stores/use-alert-store.test.ts` — `pending`
+- [ ] Criar mocks de `IConjunctionRepository` e `IAlertHistoryRepository` — `pending`
+- [ ] Teste: `loadConjunctions()` popula `conjunctions` — `pending`
+- [ ] Teste: `loadAlertHistory()` popula `alertHistory` via `IAlertHistoryRepository.findAll()` — `pending`
+- [ ] Teste: `triggerAlert()` seta `activeAlert` com primeira conjunção CRITICAL — `pending`
+- [ ] Teste: `acknowledgeCurrentAlert()` → chama use case → persiste no SQLite (via mock) — `pending`
+- [ ] Teste: `dismissAlert()` seta `activeAlert` para `null` — `pending`
+- [ ] Criar `src/application/stores/use-alert-store.ts` com todas as actions — `pending`
+- [ ] Criar `src/application/stores/index.ts` — `pending`
+- [ ] Confirmar todos os testes passam — `pending`
+
+---
+
+## Fase 23 — Globe: HTML e globe.gl
+
+- [ ] Criar `src/presentation/components/globe-view/globe.html` — `pending`
+- [ ] Carregar globe.gl via CDN (unpkg.com) no `<script>` — `pending`
+- [ ] Inicializar `Globe()` no `<div id="globe">` após DOM ready — `pending`
+- [ ] Configurar globo: `globeImageUrl`, `backgroundColor('rgba(0,0,0,0)')`, `atmosphereColor` — `pending`
+- [ ] Adicionar layer de pontos com `pointColor` diferenciado por tipo — `pending`
+- [ ] Adicionar layer de arcos para `ConjunctionLine` com animação pulse — `pending`
+- [ ] Implementar `window.addEventListener('message')` com handlers para cada comando — `pending`
+- [ ] Handler `UPDATE_POSITIONS` — `pending`
+- [ ] Handler `HIGHLIGHT_CONJUNCTION` — `pending`
+- [ ] Handler `CLEAR_HIGHLIGHT` — `pending`
+- [ ] Handler `DIM_GLOBE` e `UNDIM_GLOBE` — `pending`
+- [ ] Configurar auto-rotação suave (`autoRotate: true`, `autoRotateSpeed: 0.5`) — `pending`
+
+---
+
+## Fase 24 — Presentation: Hooks
+
+- [ ] Criar `src/presentation/hooks/use-orbital-loop.test.ts` — `pending`
+- [ ] Teste: loop chama `propagatePositions` a cada intervalo — `pending`
+- [ ] Teste: cleanup cancela o interval — `pending`
+- [ ] Criar `src/presentation/hooks/use-orbital-loop.ts` — `pending`
+- [ ] Criar `src/presentation/hooks/use-hidden-trigger.test.ts` — `pending`
+- [ ] Teste: 5 taps no canto superior direito dentro de 1.5s dispara `onTrigger` — `pending`
+- [ ] Teste: 5 taps fora do canto não dispara — `pending`
+- [ ] Teste: intervalo > 1.5s entre taps reseta contador — `pending`
+- [ ] Teste: 4 taps não dispara — `pending`
+- [ ] Criar `src/presentation/hooks/use-hidden-trigger.ts` — `pending`
+- [ ] Criar `src/presentation/hooks/use-presentation-mode.test.ts` — `pending`
+- [ ] Teste: `toggle()` alterna `isPresentationMode` — `pending`
+- [ ] Teste: estado persiste via `IStorageGateway` mockado — `pending`
+- [ ] Criar `src/presentation/hooks/use-presentation-mode.ts` — `pending`
+- [ ] Confirmar todos os testes de hooks passam — `pending`
+
+---
+
+## Fase 25 — Presentation: Componentes e Telas
+
+- [ ] Criar `src/presentation/components/globe-view/globe-view.tsx` — WebView com ref, `IGlobeGlAdapter` via `useImperativeHandle` — `pending`
+- [ ] Criar `src/presentation/components/alert-card/alert-card.tsx` — glassmorphism com `expo-blur` — `pending`
+- [ ] Exibir severity badge, nomes, Pc, MissDistance, TCPA, recomendação, janela de ação — `pending`
+- [ ] Animar entrada com `useAnimatedStyle` + `withSpring` (Reanimated 4 worklet) — `pending`
+- [ ] Criar `src/presentation/components/conjunction-item/conjunction-item.tsx` — severity bar + dados — `pending`
+- [ ] Criar `src/presentation/screens/globe-screen.tsx` — GlobeView em `absoluteFill` — `pending`
+- [ ] Integrar `useHiddenTrigger` → `triggerAlert()` — `pending`
+- [ ] Criar shared value `globeDimOpacity`, sincronizar dim + AlertCard surgimento — `pending`
+- [ ] Disparar `ExpoHapticsGateway.warn()` no trigger — `pending`
+- [ ] Criar `src/presentation/screens/alert-detail-screen.tsx` — modal com `expo-blur` — `pending`
+- [ ] Chamar `acknowledgeCurrentAlert()` ao montar — persiste no SQLite — `pending`
+- [ ] Criar `src/presentation/screens/conjunction-list-sheet.tsx` — bottom sheet manual com Reanimated — `pending`
+- [ ] Seção "Ativas" — conjunções mockadas; seção "Histórico" — alertas do SQLite — `pending`
+- [ ] Implementar swipe-down para fechar com gesture handler — `pending`
+- [ ] Criar `src/presentation/screens/onboarding-screen.tsx` — verificar flag + salvar ao confirmar — `pending`
+
+---
+
+## Fase 26 — Navegação e Tema
+
+- [ ] Atualizar `src/app/_layout.tsx` — Stack puro, `ContainerProvider` como wrapper raiz — `pending`
+- [ ] Criar `src/app/alert-detail.tsx` — rota com `presentation: 'modal'` — `pending`
+- [ ] Remover `src/app/explore.tsx` e `src/components/app-tabs.tsx` — `pending`
+- [ ] Atualizar `src/constants/theme.ts` com paleta glassmorphism dark completa — `pending`
+- [ ] Adicionar cores: `alert.critical`, `alert.warning`, `alert.info` — `pending`
+- [ ] Adicionar cores: `satellite`, `debris`, `conjunctionLine` — `pending`
+- [ ] Adicionar tokens: `glass.background`, `glass.border` — `pending`
+- [ ] Criar `src/shared/utils/formatters.ts` com `formatPc`, `formatDistance`, `formatTcpa` — `pending`
+- [ ] Criar `src/shared/utils/formatters.test.ts` e testar cada formatter — `pending`
+
+---
+
+## Fase 27 — Polish, Cobertura e Demo
+
+- [ ] Rodar `npm run test:coverage` — garantir ≥ 90% em todas as camadas — `pending`
+- [ ] Corrigir quaisquer gaps de cobertura identificados — `pending`
+- [ ] Verificar auto-rotação suave do globo — `pending`
+- [ ] Verificar spring animation do AlertCard sem jank (worklet na UI thread) — `pending`
+- [ ] Verificar sincronização: globo dim + AlertCard + haptics no mesmo frame — `pending`
+- [ ] Testar fluxo completo: abertura → globo → 5 taps → alerta → detail → SQLite persiste → lista com histórico — `pending`
+- [ ] Verificar seção "Histórico" na ConjunctionListSheet exibe alertas do SQLite — `pending`
+- [ ] Testar primeiro acesso: apagar flag MMKV e verificar onboarding — `pending`
+- [ ] Verificar PresentationMode oculta elementos corretos — `pending`
+- [ ] Testar em iOS e Android — `pending`
+- [ ] Gravar vídeo de backup da demo completa — `pending`
