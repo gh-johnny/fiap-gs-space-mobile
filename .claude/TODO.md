@@ -54,59 +54,59 @@
 
 ---
 
-## Fase 10 — Use Case: PropagateOrbits
+## Fase 10 — Use Case: PropagateOrbits ✅
 
-- [ ] Criar `src/domain/usecases/propagate-orbits.test.ts` — `pending`
-- [ ] Criar mock de `ISatelliteJsAdapter` — `pending`
-- [ ] Teste: `execute([satellite], date)` chama adapter para cada satélite — `pending`
-- [ ] Teste: posições `null` do adapter são filtradas — `pending`
-- [ ] Teste: retorna `OrbitPosition[]` com `noradId`, `lat`, `lng`, `alt` válidos — `pending`
-- [ ] Definir interface `OrbitPosition` em `src/domain/usecases/propagate-orbits.ts` — `pending`
-- [ ] Criar `PropagateOrbits` com `ISatelliteJsAdapter` injetado — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
-
----
-
-## Fase 11 — Use Case: DetectConjunctions
-
-- [ ] Criar `src/domain/usecases/detect-conjunctions.test.ts` — `pending`
-- [ ] Teste: dois objetos a `< 50km` geram um `ConjunctionEvent` — `pending`
-- [ ] Teste: dois objetos a `> 50km` não geram evento — `pending`
-- [ ] Teste: 3 objetos onde 2 estão próximos retorna 1 evento — `pending`
-- [ ] Teste: eventos ordenados CRITICAL → WARNING → INFO — `pending`
-- [ ] Criar `DetectConjunctions` com `execute(positions: OrbitPosition[]): ConjunctionEvent[]` — `pending`
-- [ ] Calcular distância 3D entre todos os pares — `pending`
-- [ ] Filtrar pares com distância `< MAX_CONJUNCTION_DISTANCE_KM (50)` — `pending`
-- [ ] Criar `ConjunctionEvent` para cada par com Pc e MissDistance proporcionais à distância — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
+- [x] Criar `src/domain/usecases/propagate-orbits.test.ts` — `done`
+- [x] Criar mock de `ISatelliteJsAdapter` — `done`
+- [x] Teste: `execute([satellite], date)` chama adapter para cada satélite — `done`
+- [x] Teste: posições `null` do adapter são filtradas — `done`
+- [x] Teste: retorna `OrbitPosition[]` com `noradId`, `lat`, `lng`, `alt` válidos — `done`
+- [x] Definir interface `OrbitPosition` em `src/domain/usecases/propagate-orbits.ts` — `done`
+- [x] Criar `PropagateOrbits` com `ISatelliteJsAdapter` injetado — `done`
+- [x] Confirmar todos os testes passam — `done` (5/5)
 
 ---
 
-## Fase 12 — Use Case: ClassifyRisk
+## Fase 11 — Use Case: DetectConjunctions ✅
 
-- [ ] Criar `src/domain/usecases/classify-risk.test.ts` — `pending`
-- [ ] Teste: `MissDistance.isCritical()` → `'CRITICAL'` independente do Pc — `pending`
-- [ ] Teste: `Pc > 1e-4` com `MissDistance` não crítica → `'CRITICAL'` — `pending`
-- [ ] Teste: `Pc` entre `1e-5..1e-4` → `'WARNING'` — `pending`
-- [ ] Teste: `Pc ≤ 1e-5` → `'INFO'` — `pending`
-- [ ] Criar `ClassifyRisk` com `execute(pc, miss): Severity` — `pending`
-- [ ] Regra: `isCritical()` tem precedência sobre Pc — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
+- [x] Criar `src/domain/usecases/detect-conjunctions.test.ts` — `done`
+- [x] Teste: dois objetos a `< 50km` geram um `ConjunctionEvent` — `done`
+- [x] Teste: dois objetos a `> 50km` não geram evento — `done`
+- [x] Teste: 3 objetos onde 2 estão próximos retorna 1 evento — `done`
+- [x] Teste: eventos ordenados CRITICAL → WARNING → INFO — `done`
+- [x] Criar `DetectConjunctions` com `execute(satellites, positions): ConjunctionEvent[]` — `done`
+- [x] Calcular distância 3D entre todos os pares — `done`
+- [x] Filtrar pares com distância `< MAX_CONJUNCTION_DISTANCE_KM (50)` — `done`
+- [x] Criar `ConjunctionEvent` para cada par com Pc e MissDistance proporcionais à distância — `done`
+- [x] Confirmar todos os testes passam — `done` (6/6)
 
 ---
 
-## Fase 13 — Use Case: AcknowledgeAlert
+## Fase 12 — Use Case: ClassifyRisk ✅
 
-- [ ] Criar `src/domain/usecases/acknowledge-alert.test.ts` — `pending`
-- [ ] Criar mock de `IStorageGateway` — `pending`
-- [ ] Criar mock de `IAlertHistoryRepository` — `pending`
-- [ ] Teste: `execute(alert)` retorna `OrbitalAlert` com `status: 'acknowledged'` — `pending`
-- [ ] Teste: `execute` chama `storageGateway.set` com chave correta — `pending`
-- [ ] Teste: `execute` chama `alertHistoryRepository.save` com o alert atualizado — `pending`
-- [ ] Teste: retorno é nova instância (imutabilidade garantida) — `pending`
-- [ ] Criar `AcknowledgeAlert` injetando `IStorageGateway` e `IAlertHistoryRepository` — `pending`
-- [ ] Criar `src/domain/usecases/index.ts` — re-exporta use cases e `OrbitPosition` — `pending`
-- [ ] Confirmar todos os testes passam — `pending`
+- [x] Criar `src/domain/usecases/classify-risk.test.ts` — `done`
+- [x] Teste: `MissDistance.isCritical()` → `'CRITICAL'` independente do Pc — `done`
+- [x] Teste: `Pc > 1e-4` com `MissDistance` não crítica → `'CRITICAL'` — `done`
+- [x] Teste: `Pc` entre `1e-5..1e-4` → `'WARNING'` — `done`
+- [x] Teste: `Pc ≤ 1e-5` → `'INFO'` — `done`
+- [x] Criar `ClassifyRisk` com `execute(pc, miss): Severity` — `done`
+- [x] Regra: `isCritical()` tem precedência sobre Pc — `done`
+- [x] Confirmar todos os testes passam — `done` (7/7)
+
+---
+
+## Fase 13 — Use Case: AcknowledgeAlert ✅
+
+- [x] Criar `src/domain/usecases/acknowledge-alert.test.ts` — `done`
+- [x] Criar mock de `IStorageGateway` — `done`
+- [x] Criar mock de `IAlertHistoryRepository` — `done`
+- [x] Teste: `execute(alert)` retorna `OrbitalAlert` com `status: 'acknowledged'` — `done`
+- [x] Teste: `execute` chama `storageGateway.set` com chave correta — `done`
+- [x] Teste: `execute` chama `alertHistoryRepository.save` com o alert atualizado — `done`
+- [x] Teste: retorno é nova instância (imutabilidade garantida) — `done`
+- [x] Criar `AcknowledgeAlert` injetando `IStorageGateway` e `IAlertHistoryRepository` — `done`
+- [x] Criar `src/domain/usecases/index.ts` — re-exporta use cases e `OrbitPosition` — `done`
+- [x] Confirmar todos os testes passam — `done` (4/4)
 
 ---
 
