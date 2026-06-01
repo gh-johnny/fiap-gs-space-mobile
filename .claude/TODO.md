@@ -46,16 +46,11 @@
 
 ---
 
-## Fase 9 — Interfaces de Domínio
+## Fase 9 — Interfaces de domínio ✅
 
-- [ ] Criar `src/domain/repositories/i-satellite-repository.ts` — `findAll(): Promise<SatelliteObject[]>` — `pending`
-- [ ] Criar `src/domain/repositories/i-conjunction-repository.ts` — `findAll()`, `findBySeverity(s: Severity)` — `pending`
-- [ ] Criar `src/domain/repositories/i-alert-history-repository.ts` — `save(a: OrbitalAlert)`, `findAll()`, `findByStatus(s: AlertStatus)` — `pending`
-- [ ] Criar `src/domain/repositories/index.ts` — `pending`
-- [ ] Criar `src/domain/gateways/i-tle-gateway.ts` — `fetchTLEs(): Promise<TLEData[]>` — `pending`
-- [ ] Criar `src/domain/gateways/i-storage-gateway.ts` — `get<T>`, `set<T>`, `remove` — `pending`
-- [ ] Criar `src/domain/gateways/i-haptics-gateway.ts` — `warn()`, `impact()` — `pending`
-- [ ] Criar `src/domain/gateways/index.ts` — `pending`
+- [x] `i-satellite-repository.ts`, `i-conjunction-repository.ts`, `i-alert-history-repository.ts` + index — `done`
+- [x] `i-tle-gateway.ts`, `i-storage-gateway.ts`, `i-haptics-gateway.ts` + index — `done`
+- [x] 59 testes do domínio completo passando — `done`
 
 ---
 
