@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native'
-import { BlurView } from 'expo-blur'
 import { useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAlertStore } from '@/application/stores/use-alert-store'
+import { useUIStore } from '@/application/stores/use-ui-store'
 import { useContainer } from '@/application/container/container-context'
+import { formatPc, formatMissDistance, formatTcpa, formatWindow } from '@/presentation/utils/format-simple'
 import type { Severity } from '@/domain/value-objects'
 
 const SEVERITY_COLORS: Record<Severity, string> = {
@@ -12,10 +14,24 @@ const SEVERITY_COLORS: Record<Severity, string> = {
   INFO: '#34C759',
 }
 
+const SEVERITY_LABELS: Record<Severity, string> = {
+  CRITICAL: 'CRÍTICO',
+  WARNING: 'ALERTA',
+  INFO: 'INFO',
+}
+
+const RECOMMENDATIONS: Record<Severity, string> = {
+  CRITICAL: 'Ação imediata necessária — risco de colisão iminente',
+  WARNING: 'Monitorar de perto — janela de manobra disponível',
+  INFO: 'Situação sob controle — continuar monitoramento',
+}
+
 export function AlertDetailScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { activeAlert, acknowledgeCurrentAlert } = useAlertStore()
   const { acknowledgeAlert } = useContainer()
+  const { simpleMode, toggleSimpleMode } = useUIStore()
 
   useEffect(() => {
     if (activeAlert && activeAlert.status === 'detected') {
@@ -29,90 +45,195 @@ export function AlertDetailScreen() {
   const color = SEVERITY_COLORS[event.severity]
 
   return (
-    <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={[styles.badge, { backgroundColor: color + '33', borderColor: color }]}>
-          <Text style={[styles.badgeText, { color }]}>{event.severity}</Text>
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+
+        {/* Header row: badge + mode toggle */}
+        <View style={styles.headerRow}>
+          <View style={[styles.badge, { backgroundColor: color + '22', borderColor: color + '55' }]}>
+            <View style={[styles.badgeDot, { backgroundColor: color }]} />
+            <Text style={[styles.badgeText, { color }]}>{SEVERITY_LABELS[event.severity]}</Text>
+          </View>
+
+          <TouchableOpacity style={styles.modeToggle} onPress={toggleSimpleMode}>
+            <Text style={[styles.modeSegment, !simpleMode && styles.modeSegmentActive]}>TÉC</Text>
+            <Text style={styles.modeSep}> · </Text>
+            <Text style={[styles.modeSegment, simpleMode && styles.modeSegmentActive]}>SIM</Text>
+          </TouchableOpacity>
         </View>
 
-        <Text style={styles.title}>Evento de Conjunção</Text>
+        {/* Hero: the two objects */}
+        <View style={styles.hero}>
+          <View style={styles.objectBlock}>
+            <Text style={styles.objectName} numberOfLines={2}>{event.objectA.name}</Text>
+            <Text style={styles.noradId}>NORAD {event.objectA.noradId.value}</Text>
+          </View>
 
-        <View style={styles.objectCard}>
-          <Text style={styles.cardTitle}>Objeto A</Text>
-          <Text style={styles.objectName}>{event.objectA.name}</Text>
-          <Text style={styles.noradId}>NORAD #{event.objectA.noradId.value}</Text>
+          <Text style={[styles.versus, { color }]}>×</Text>
+
+          <View style={styles.objectBlock}>
+            <Text style={styles.objectName} numberOfLines={2}>{event.objectB.name}</Text>
+            <Text style={styles.noradId}>NORAD {event.objectB.noradId.value}</Text>
+          </View>
         </View>
 
-        <View style={styles.objectCard}>
-          <Text style={styles.cardTitle}>Objeto B</Text>
-          <Text style={styles.objectName}>{event.objectB.name}</Text>
-          <Text style={styles.noradId}>NORAD #{event.objectB.noradId.value}</Text>
+        {/* 2×2 metric grid */}
+        <View style={styles.grid}>
+          <MetricCard
+            label={simpleMode ? 'Probabilidade' : 'Pc'}
+            value={formatPc(event.pc, simpleMode)}
+            color={color}
+          />
+          <MetricCard
+            label={simpleMode ? 'Distância' : 'Miss Distance'}
+            value={formatMissDistance(event.missDistance, simpleMode)}
+            color={color}
+          />
+          <MetricCard
+            label={simpleMode ? 'Quando' : 'TCPA'}
+            value={formatTcpa(event.tcpa, simpleMode)}
+            color={color}
+          />
+          <MetricCard
+            label={simpleMode ? 'Horário' : 'Janela UTC'}
+            value={formatWindow(event.tcpa, simpleMode)}
+            color={color}
+          />
         </View>
 
-        <View style={styles.metricsCard}>
-          <MetricBlock label="Probabilidade de Colisão" value={event.pc.toScientificNotation()} />
-          <MetricBlock label="Distância de Passagem" value={event.missDistance.toDisplayString()} />
-          <MetricBlock label="Tempo para Aproximação" value={event.tcpa.toDisplayString()} />
-          <MetricBlock label="Janela UTC" value={event.tcpa.toUtcString()} />
+        {/* Recommendation */}
+        <View style={[styles.recommendation, { borderLeftColor: color }]}>
+          <Text style={styles.recommendationText}>{RECOMMENDATIONS[event.severity]}</Text>
         </View>
 
+        {/* Status */}
         <Text style={styles.status}>
-          Status: <Text style={{ color }}>{activeAlert.status.toUpperCase()}</Text>
+          Status:{' '}
+          <Text style={{ color, fontWeight: '700' }}>{activeAlert.status.toUpperCase()}</Text>
         </Text>
 
-        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
-          <Text style={styles.closeBtnText}>FECHAR</Text>
+        {/* Close button */}
+        <TouchableOpacity
+          style={[styles.closeBtn, { borderColor: color + '88' }]}
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.closeBtnText, { color }]}>FECHAR</Text>
         </TouchableOpacity>
+
       </ScrollView>
-    </BlurView>
+    </View>
   )
 }
 
-function MetricBlock({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <View style={styles.metricBlock}>
+    <View style={styles.metricCard}>
       <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={[styles.metricValue, { color }]}>{value}</Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 24, paddingTop: 60, gap: 16 },
+  root: { flex: 1, backgroundColor: '#000814' },
+  content: { paddingHorizontal: 22, gap: 22 },
+
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
   },
+  badgeDot: { width: 7, height: 7, borderRadius: 4 },
   badgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-  title: { color: '#fff', fontSize: 22, fontWeight: '700' },
-  objectCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    padding: 14,
-    gap: 2,
-  },
-  cardTitle: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '600', letterSpacing: 1 },
-  objectName: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  noradId: { color: 'rgba(255,255,255,0.4)', fontSize: 11 },
-  metricsCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    padding: 14,
-    gap: 10,
-  },
-  metricBlock: { gap: 2 },
-  metricLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 11 },
-  metricValue: { color: '#fff', fontSize: 14, fontWeight: '500' },
-  status: { color: 'rgba(255,255,255,0.6)', fontSize: 13 },
-  closeBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
-    paddingVertical: 14,
+
+  modeToggle: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
-  closeBtnText: { color: '#fff', fontWeight: '700', letterSpacing: 1 },
+  modeSegment: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: 'rgba(255,255,255,0.25)' },
+  modeSegmentActive: { color: '#fff' },
+  modeSep: { color: 'rgba(255,255,255,0.2)', fontSize: 10 },
+
+  hero: { alignItems: 'center', gap: 10, paddingVertical: 4 },
+  objectBlock: { alignItems: 'center', gap: 4 },
+  objectName: {
+    color: '#fff',
+    fontSize: 19,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.2,
+    lineHeight: 24,
+  },
+  noradId: { color: 'rgba(255,255,255,0.32)', fontSize: 11, letterSpacing: 0.5 },
+  versus: { fontSize: 34, fontWeight: '200', lineHeight: 38 },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  metricCard: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  metricLabel: {
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  metricValue: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+
+  recommendation: {
+    borderLeftWidth: 3,
+    paddingLeft: 16,
+    paddingVertical: 2,
+  },
+  recommendationText: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 13,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+
+  status: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 12,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+
+  closeBtn: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingVertical: 17,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  closeBtnText: { fontSize: 13, fontWeight: '700', letterSpacing: 2 },
 })

@@ -5,6 +5,8 @@ import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import { OrbitalAlert } from '@/domain/entities/orbital-alert'
 import type { Severity } from '@/domain/value-objects'
 import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
+import { useUIStore } from '@/application/stores/use-ui-store'
+import { formatPc, formatMissDistance, formatTcpa, formatWindow } from '@/presentation/utils/format-simple'
 
 interface AlertCardProps {
   alert: OrbitalAlert
@@ -35,6 +37,7 @@ const RECOMMENDATIONS: Record<Severity, string> = {
 export function AlertCard({ alert, onPress, onAcknowledge, onDismiss, visible }: AlertCardProps) {
   const { conjunctionEvent: event } = alert
   const severity = event.severity
+  const { simpleMode } = useUIStore()
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: withSpring(visible ? 0 : 300, { damping: 20, stiffness: 200 }) }],
@@ -65,10 +68,22 @@ export function AlertCard({ alert, onPress, onAcknowledge, onDismiss, visible }:
             </Text>
 
             <View style={styles.metrics}>
-              <MetricRow label="Pc" value={event.pc.toScientificNotation()} />
-              <MetricRow label="Distância" value={event.missDistance.toDisplayString()} />
-              <MetricRow label="TCPA" value={event.tcpa.toDisplayString()} />
-              <MetricRow label="Janela" value={event.tcpa.toUtcString()} />
+              <MetricRow
+                label={simpleMode ? 'Prob.' : 'Pc'}
+                value={formatPc(event.pc, simpleMode)}
+              />
+              <MetricRow
+                label={simpleMode ? 'Separação' : 'Distância'}
+                value={formatMissDistance(event.missDistance, simpleMode)}
+              />
+              <MetricRow
+                label={simpleMode ? 'Quando' : 'TCPA'}
+                value={formatTcpa(event.tcpa, simpleMode)}
+              />
+              <MetricRow
+                label={simpleMode ? 'Horário' : 'Janela'}
+                value={formatWindow(event.tcpa, simpleMode)}
+              />
             </View>
 
             <Text style={styles.recommendation}>{RECOMMENDATIONS[severity]}</Text>

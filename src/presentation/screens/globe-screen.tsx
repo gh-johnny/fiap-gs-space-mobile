@@ -8,6 +8,7 @@ import { ConjunctionListSheet } from '@/presentation/screens/conjunction-list-sh
 import { IGlobeGlAdapter } from '@/infrastructure/adapters/i-globe-gl-adapter'
 import { useOrbitalStore } from '@/application/stores/use-orbital-store'
 import { useAlertStore } from '@/application/stores/use-alert-store'
+import { useUIStore } from '@/application/stores/use-ui-store'
 import { useOrbitalLoop } from '@/presentation/hooks/use-orbital-loop'
 import { useHiddenTrigger } from '@/presentation/hooks/use-hidden-trigger'
 import { useContainer } from '@/application/container/container-context'
@@ -31,6 +32,7 @@ export function GlobeScreen() {
 
   const { positions, loadSatellites, propagatePositions } = useOrbitalStore()
   const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlert, acknowledgeCurrentAlert, dismissAlert } = useAlertStore()
+  const { simpleMode, toggleSimpleMode } = useUIStore()
 
   function handleTrigger() {
     void hapticsGateway.warn()
@@ -106,9 +108,15 @@ export function GlobeScreen() {
           <Text style={styles.listBtnText}>≡  CONJUNÇÕES</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.modeBtn} onPress={toggleSimpleMode}>
+          <Text style={[styles.modeSegment, !simpleMode && styles.modeSegmentActive]}>TÉC</Text>
+          <Text style={styles.modeSep}> · </Text>
+          <Text style={[styles.modeSegment, simpleMode && styles.modeSegmentActive]}>SIM</Text>
+        </TouchableOpacity>
+
         <View style={styles.statusPill}>
           <View style={styles.statusDot} />
-          <Text style={styles.statusText}>MONITORANDO</Text>
+          <Text style={styles.statusText}>MONITOR</Text>
         </View>
       </View>
 
@@ -155,6 +163,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1,
   },
+  modeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,8,20,0.6)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  modeSegment: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: 'rgba(255,255,255,0.25)',
+  },
+  modeSegmentActive: { color: '#fff' },
+  modeSep: { color: 'rgba(255,255,255,0.2)', fontSize: 10 },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
