@@ -12,13 +12,14 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { BlurView } from 'expo-blur'
 import { useOrbitalStore } from '@/application/stores/use-orbital-store'
+import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 
-interface SatelliteControlSheetProps {
+interface Props {
   noradId: string
   onClose: () => void
 }
 
-const SHEET_HEIGHT = 620
+const SHEET_HEIGHT = 590
 const CLOSE_THRESHOLD = 100
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -28,14 +29,12 @@ function orbitBand(alt: number) {
   if (alt < 35786) return 'MEO'
   return 'GEO'
 }
-
 function typeLabel(t: string) {
   if (t === 'OPERATIONAL_SATELLITE') return 'OPERACIONAL'
   if (t === 'DEBRIS') return 'DETRITO'
-  if (t === 'ROCKET_BODY') return 'ESTÁGIO'
+  if (t === 'ROCKET_BODY') return 'ESTÁGIO ORBITAL'
   return t
 }
-
 function typeColor(t: string) {
   if (t === 'OPERATIONAL_SATELLITE') return '#00E5FF'
   if (t === 'DEBRIS') return '#FF9500'
@@ -43,134 +42,161 @@ function typeColor(t: string) {
   return '#00E5FF'
 }
 
-// ─── sub-components ────────────────────────────────────────────────────────────
+// ─── satellite illustration ────────────────────────────────────────────────────
+
+function SolarArray({ color }: { color: string }) {
+  return (
+    <View style={[illus.solarArray, { borderColor: color + '70' }]}>
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} style={[illus.solarCell, { backgroundColor: color + '22', borderColor: color + '55' }]} />
+      ))}
+    </View>
+  )
+}
+
+function SatelliteIllustration({ satType, color }: { satType: string; color: string }) {
+  if (satType === 'DEBRIS') {
+    return (
+      <View style={illus.root}>
+        <View style={[illus.glow, { backgroundColor: color + '18' }]} />
+        <Text style={[illus.debrisIcon, { color }]}>✦</Text>
+        <Text style={[illus.debrisLabel, { color: color + '80' }]}>FRAGMENTO NÃO CONTROLADO</Text>
+      </View>
+    )
+  }
+  if (satType === 'ROCKET_BODY') {
+    return (
+      <View style={illus.root}>
+        <View style={[illus.glow, { backgroundColor: color + '18' }]} />
+        <View style={[illus.rocketNose, { borderColor: color, backgroundColor: color + '15' }]} />
+        <View style={[illus.rocketBody, { borderColor: color, backgroundColor: color + '08' }]}>
+          <Text style={[illus.rocketLabel, { color }]}>◎</Text>
+          <Text style={[illus.rocketSub, { color: color + '70' }]}>PROPELENTE</Text>
+        </View>
+        <View style={[illus.rocketNozzle, { borderColor: color, backgroundColor: color + '25' }]} />
+      </View>
+    )
+  }
+  // Operational satellite
+  return (
+    <View style={illus.root}>
+      <View style={[illus.glow, { backgroundColor: color + '18' }]} />
+      <View style={[illus.antennaPost, { backgroundColor: color + '70' }]} />
+      <View style={[illus.antennaDish, { borderColor: color }]} />
+      <View style={illus.mainRow}>
+        <SolarArray color={color} />
+        <View style={[illus.arm, { backgroundColor: color + '55' }]} />
+        <View style={[illus.body, { borderColor: color, backgroundColor: color + '08' }]}>
+          <View style={[illus.bodyPorthole, { borderColor: color + '80' }]} />
+          <View style={[illus.bodyCenter, { backgroundColor: color + '28' }]}>
+            <Text style={[illus.bodyIcon, { color }]}>◉</Text>
+          </View>
+          <View style={[illus.bodyPorthole, { borderColor: color + '80' }]} />
+        </View>
+        <View style={[illus.arm, { backgroundColor: color + '55' }]} />
+        <SolarArray color={color} />
+      </View>
+      <View style={[illus.thrusterMount, { backgroundColor: color + '40' }]} />
+      <View style={[illus.thrusterNozzle, { borderColor: color, backgroundColor: color + '18' }]} />
+    </View>
+  )
+}
+
+// ─── live dot ─────────────────────────────────────────────────────────────────
 
 function LiveDot() {
   const opacity = useSharedValue(1)
   useEffect(() => {
-    opacity.value = withRepeat(withTiming(0.2, { duration: 700 }), -1, true)
+    opacity.value = withRepeat(withTiming(0.15, { duration: 750 }), -1, true)
     return () => cancelAnimation(opacity)
   }, [])
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value }))
-  return (
-    <View style={styles.liveRow}>
-      <Animated.View style={[styles.liveDot, style]} />
-      <Text style={styles.liveText}>LIVE</Text>
-    </View>
-  )
+  const s = useAnimatedStyle(() => ({ opacity: opacity.value }))
+  return <Animated.View style={[styles.liveDot, s]} />
 }
 
-function PulseRing({ danger }: { danger?: boolean }) {
-  const opacity = useSharedValue(0.1)
-  useEffect(() => {
-    opacity.value = withRepeat(withTiming(0.9, { duration: 550 }), -1, true)
-    return () => cancelAnimation(opacity)
-  }, [])
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value }))
-  return (
-    <Animated.View
-      style={[StyleSheet.absoluteFill, styles.pulseRing, danger && styles.pulseRingDanger, style]}
-      pointerEvents="none"
-    />
-  )
+// ─── mode selector ─────────────────────────────────────────────────────────────
+
+const MODES = ['NOMINAL', 'ECO', 'SEGURO'] as const
+type Mode = typeof MODES[number]
+
+const MODE_COLORS: Record<Mode, string> = {
+  NOMINAL: '#00E5FF',
+  ECO: '#34C759',
+  SEGURO: '#FF9500',
 }
 
-function SectionHeader({ num, title }: { num: string; title: string }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionNum}>{num}</Text>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionLine} />
-    </View>
-  )
-}
+// ─── system panel ──────────────────────────────────────────────────────────────
 
-// ─── control button ────────────────────────────────────────────────────────────
-
-interface ControlButtonProps {
+interface SystemPanelProps {
   icon: string
-  label: string
-  kind: 'command' | 'toggle'
-  onSuccess?: string
-  danger?: boolean
-  delayMs?: [number, number]
+  title: string
+  onValue: string
+  offValue: string
+  defaultOn?: boolean
+  color: string
 }
 
-function ControlButton({ icon, label, kind, onSuccess, danger = false, delayMs = [700, 1400] }: ControlButtonProps) {
-  const [cmdState, setCmdState] = useState<'idle' | 'running' | 'done'>('idle')
-  const [toggled, setToggled] = useState(false)
-
-  const isOn = kind === 'toggle' && toggled
-  const isDone = cmdState === 'done'
-  const isRunning = cmdState === 'running'
-
-  const accentColor = isDone ? '#34C759' : isOn ? '#00E5FF' : danger ? '#FF3B30' : 'rgba(255,255,255,0.07)'
-
-  function handlePress() {
-    if (kind === 'toggle') { setToggled(v => !v); return }
-    if (isRunning) return
-    setCmdState('running')
-    const ms = delayMs[0] + Math.random() * (delayMs[1] - delayMs[0])
-    setTimeout(() => {
-      setCmdState('done')
-      setTimeout(() => setCmdState('idle'), 2200)
-    }, ms)
-  }
-
+function SystemPanel({ icon, title, onValue, offValue, defaultOn = true, color }: SystemPanelProps) {
+  const [on, setOn] = useState(defaultOn)
   return (
-    <Pressable onPress={handlePress} style={styles.btnWrap}>
-      <View style={[
-        styles.btn,
-        isOn && styles.btnOn,
-        isDone && styles.btnDone,
-        danger && styles.btnDanger,
-      ]}>
-        {isRunning && <PulseRing danger={danger} />}
-        <View style={[styles.btnAccent, { backgroundColor: accentColor }]} />
-        <Text style={[styles.btnIcon, isOn && styles.btnIconOn, isDone && styles.btnIconDone]}>
-          {isDone ? '✓' : icon}
-        </Text>
-        <Text style={[styles.btnLabel, isOn && styles.btnLabelOn, isDone && styles.btnLabelDone]} numberOfLines={1}>
-          {isDone ? (onSuccess ?? 'OK') : isRunning ? '···' : label}
-        </Text>
+    <Pressable style={[styles.sysPanel, on && { borderColor: color + '45' }]} onPress={() => setOn(v => !v)}>
+      <View style={styles.sysPanelTop}>
+        <Text style={styles.sysPanelIcon}>{icon}</Text>
+        <View style={[styles.sysPanelDot, { backgroundColor: on ? color : '#FF3B30' }]} />
       </View>
+      <Text style={styles.sysPanelTitle}>{title}</Text>
+      <Text style={[styles.sysPanelValue, { color: on ? color : 'rgba(255,59,48,0.7)' }]} numberOfLines={1}>
+        {on ? onValue : offValue}
+      </Text>
     </Pressable>
   )
 }
 
-// ─── emergency button ──────────────────────────────────────────────────────────
+// ─── orbital correction button ─────────────────────────────────────────────────
 
-function EmergencyButton() {
-  const [state, setState] = useState<'idle' | 'running' | 'done'>('idle')
-  const isRunning = state === 'running'
-  const isDone = state === 'done'
+const PHASES = [
+  'CALCULANDO TRAJETÓRIA…',
+  'ATIVANDO PROPULSORES…',
+  'Δv +0.3 m/s APLICADO',
+] as const
 
-  function handlePress() {
-    if (isRunning) return
-    setState('running')
+function OrbitalCorrectionButton({ color }: { color: string }) {
+  const [phase, setPhase] = useState(-1)
+  const pulseOp = useSharedValue(0)
+
+  function start() {
+    if (phase >= 0) return
+    setPhase(0)
+    pulseOp.value = withRepeat(withTiming(0.7, { duration: 500 }), -1, true)
+    setTimeout(() => setPhase(1), 1400)
     setTimeout(() => {
-      setState('done')
-      setTimeout(() => setState('idle'), 3000)
-    }, 1600)
+      cancelAnimation(pulseOp)
+      pulseOp.value = withTiming(0, { duration: 200 })
+      setPhase(2)
+    }, 2900)
+    setTimeout(() => setPhase(-1), 5500)
   }
 
+  const pulseStyle = useAnimatedStyle(() => ({ opacity: pulseOp.value }))
+  const isDone = phase === 2
+  const isRunning = phase === 0 || phase === 1
+  const btnColor = isDone ? '#34C759' : color
+
   return (
-    <Pressable onPress={handlePress} style={styles.emergencyWrap}>
-      <View style={[styles.emergencyBtn, isDone && styles.emergencyBtnDone]}>
-        {isRunning && <PulseRing danger={!isDone} />}
-        <View style={styles.emergencyStripe} />
-        <Text style={[styles.emergencyIcon, isDone && { color: '#34C759' }]}>
-          {isDone ? '✓' : '⚠'}
+    <Pressable onPress={start} style={styles.correctionWrap}>
+      <View style={[styles.correctionBtn, { borderColor: btnColor + '70' }, isDone && styles.correctionBtnDone]}>
+        <Animated.View
+          style={[StyleSheet.absoluteFill, styles.correctionPulse, { borderColor: color }, pulseStyle]}
+          pointerEvents="none"
+        />
+        <Text style={[styles.correctionText, { color: btnColor }]}>
+          {phase >= 0 ? PHASES[Math.min(phase, 2)] : 'EXECUTAR CORREÇÃO ORBITAL'}
         </Text>
-        <View style={styles.emergencyText}>
-          <Text style={[styles.emergencyLabel, isDone && { color: '#34C759' }]}>
-            {isDone ? 'MODO SEGURO ATIVADO' : 'ATIVAR MODO SEGURO'}
+        {!isRunning && (
+          <Text style={[styles.correctionArrow, { color: btnColor + '80' }]}>
+            {isDone ? '✓' : '›'}
           </Text>
-          <Text style={styles.emergencySub}>
-            {isDone ? 'todos os sistemas em standby' : 'protocolo de emergência · uso restrito'}
-          </Text>
-        </View>
-        <Text style={[styles.emergencyArrow, isDone && { color: '#34C759' }]}>›</Text>
+        )}
       </View>
     </Pressable>
   )
@@ -178,7 +204,7 @@ function EmergencyButton() {
 
 // ─── main sheet ────────────────────────────────────────────────────────────────
 
-export function SatelliteControlSheet({ noradId, onClose }: SatelliteControlSheetProps) {
+export function SatelliteControlSheet({ noradId, onClose }: Props) {
   const translateY = useSharedValue(SHEET_HEIGHT)
 
   useEffect(() => {
@@ -204,24 +230,18 @@ export function SatelliteControlSheet({ noradId, onClose }: SatelliteControlShee
 
   const animStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }))
 
+  const [activeMode, setActiveMode] = useState<Mode>('NOMINAL')
+
   const satType = satellite?.type ?? ''
   const color   = typeColor(satType)
-  const vel     = position ? Math.sqrt(398600 / (6371 + position.alt)).toFixed(1) : null
   const band    = position ? orbitBand(position.alt) : null
-
-  const telemetry = [
-    { label: 'LAT', value: position ? `${position.lat.toFixed(2)}°` : '—' },
-    { label: 'LNG', value: position ? `${position.lng.toFixed(2)}°` : '—' },
-    { label: 'ALT', value: position ? `${Math.round(position.alt)} km` : '—' },
-    { label: 'VEL', value: vel ? `${vel} km/s` : '—' },
-  ]
+  const vel     = position ? Math.sqrt(398600 / (6371 + position.alt)).toFixed(1) : null
 
   return (
     <Animated.View style={[styles.container, animStyle]}>
-      {/* Type-color top bar */}
-      <View style={[styles.topColorBar, { backgroundColor: color }]} />
+      <View style={[styles.topBar, { backgroundColor: color }]} />
+      <BlurView intensity={75} tint="dark" style={styles.blur}>
 
-      <BlurView intensity={72} tint="dark" style={styles.blur}>
         <GestureDetector gesture={pan}>
           <View style={styles.handleArea}>
             <View style={styles.handle} />
@@ -231,86 +251,91 @@ export function SatelliteControlSheet({ noradId, onClose }: SatelliteControlShee
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-          {/* ── header ── */}
+          {/* Illustration + header */}
+          <View style={styles.illustrationArea}>
+            <SatelliteIllustration satType={satType} color={color} />
+          </View>
+
           <View style={styles.header}>
-            <View style={styles.headerTop}>
-              <Text style={styles.satName} numberOfLines={2}>{satellite?.name ?? `SAT ${noradId}`}</Text>
-              <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={8}>
+            <View style={styles.headerRow}>
+              <View style={styles.headerText}>
+                <Text style={styles.satName} numberOfLines={2}>{satellite?.name ?? `SAT-${noradId}`}</Text>
+                <View style={styles.badgeRow}>
+                  <View style={[styles.typeBadge, { backgroundColor: color + '1A', borderColor: color + '55' }]}>
+                    <View style={[styles.typeDot, { backgroundColor: color }]} />
+                    <Text style={[styles.typeBadgeText, { color }]}>{typeLabel(satType)}</Text>
+                  </View>
+                  {band && <View style={styles.orbitBadge}><Text style={styles.orbitBadgeText}>{band}</Text></View>}
+                </View>
+                <Text style={styles.noradId}>NORAD {noradId}</Text>
+              </View>
+              <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={10}>
                 <Text style={styles.closeBtnText}>✕</Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.badgeRow}>
-              <View style={[styles.typeBadge, { backgroundColor: color + '1A', borderColor: color + '55' }]}>
-                <View style={[styles.typeDot, { backgroundColor: color }]} />
-                <Text style={[styles.typeBadgeText, { color }]}>{typeLabel(satType)}</Text>
-              </View>
-              {band && (
-                <View style={styles.orbitBadge}>
-                  <Text style={styles.orbitBadgeText}>{band}</Text>
-                </View>
-              )}
-            </View>
-
-            <Text style={styles.noradId}>NORAD ID · {noradId}</Text>
           </View>
 
-          {/* ── telemetry HUD ── */}
-          <View style={styles.hudCard}>
+          {/* Compact telemetry */}
+          <View style={[styles.telemetry, { borderColor: color + '22' }]}>
             <LiveDot />
-            <View style={styles.hudRow}>
-              {telemetry.map(({ label, value }, i) => (
-                <React.Fragment key={label}>
-                  {i > 0 && <View style={styles.hudSep} />}
-                  <View style={styles.hudCol}>
-                    <Text style={styles.hudLabel}>{label}</Text>
-                    <Text style={styles.hudValue}>{value}</Text>
+            <Text style={[styles.telemetryDivider, { color: color + '40' }]}>·</Text>
+            {position ? (
+              <>
+                <Text style={styles.telemetryItem}>
+                  <Text style={styles.telemetryKey}>LAT </Text>
+                  <Text style={[styles.telemetryVal, { color }]}>{position.lat.toFixed(1)}°</Text>
+                </Text>
+                <Text style={[styles.telemetryDivider, { color: 'rgba(255,255,255,0.12)' }]}>/</Text>
+                <Text style={styles.telemetryItem}>
+                  <Text style={styles.telemetryKey}>LNG </Text>
+                  <Text style={[styles.telemetryVal, { color }]}>{position.lng.toFixed(1)}°</Text>
+                </Text>
+                <Text style={[styles.telemetryDivider, { color: 'rgba(255,255,255,0.12)' }]}>/</Text>
+                <Text style={styles.telemetryItem}>
+                  <Text style={styles.telemetryKey}>ALT </Text>
+                  <Text style={[styles.telemetryVal, { color }]}>{Math.round(position.alt)} km</Text>
+                </Text>
+                <Text style={[styles.telemetryDivider, { color: 'rgba(255,255,255,0.12)' }]}>/</Text>
+                <Text style={styles.telemetryItem}>
+                  <Text style={styles.telemetryKey}>VEL </Text>
+                  <Text style={[styles.telemetryVal, { color }]}>{vel} km/s</Text>
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.telemetryKey}>SEM SINAL</Text>
+            )}
+          </View>
+
+          {/* Mode selector */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>MODO DE OPERAÇÃO</Text>
+            <View style={styles.modeRow}>
+              {MODES.map(m => (
+                <Pressable key={m} style={styles.modeBtnWrap} onPress={() => setActiveMode(m)}>
+                  <View style={[
+                    styles.modeBtn,
+                    activeMode === m && { backgroundColor: MODE_COLORS[m] + '18', borderColor: MODE_COLORS[m] + '60' },
+                  ]}>
+                    <Text style={[styles.modeBtnText, activeMode === m && { color: MODE_COLORS[m] }]}>{m}</Text>
                   </View>
-                </React.Fragment>
+                </Pressable>
               ))}
             </View>
           </View>
 
-          {/* ── sections ── */}
+          {/* System panels */}
           <View style={styles.section}>
-            <SectionHeader num="01" title="SISTEMAS" />
-            <View style={styles.grid}>
-              <ControlButton icon="⚡" label="ENERGIA"  kind="toggle" />
-              <ControlButton icon="🌡" label="THERMAL"  kind="command" onSuccess="REGULADO"  delayMs={[900, 1300]} />
-              <ControlButton icon="↻"  label="ATITUDE"  kind="command" onSuccess="CORRIGIDA" delayMs={[800, 1200]} />
+            <Text style={styles.sectionLabel}>SISTEMAS</Text>
+            <View style={styles.sysPanelRow}>
+              <SystemPanel icon="⚡" title="SOLAR" onValue="94 W · 98%" offValue="OFFLINE" color={color} defaultOn />
+              <SystemPanel icon="📡" title="COMMS" onValue="S-BAND 2.2G" offValue="SILÊNCIO" color={color} defaultOn />
+              <SystemPanel icon="🔭" title="CÂMERA" onValue="4K · VIS" offValue="OFFLINE" color={color} defaultOn={false} />
             </View>
           </View>
 
-          <View style={styles.section}>
-            <SectionHeader num="02" title="COMUNICAÇÕES" />
-            <View style={styles.grid}>
-              <ControlButton icon="📶" label="PING"     kind="command" onSuccess="38 ms"   delayMs={[1400, 2200]} />
-              <ControlButton icon="▲"  label="UPLINK"   kind="command" onSuccess="4.1 MB"  delayMs={[1200, 2000]} />
-              <ControlButton icon="▼"  label="DOWNLINK" kind="command" onSuccess="9.7 MB"  delayMs={[1500, 2400]} />
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <SectionHeader num="03" title="PROPULSÃO" />
-            <View style={styles.grid}>
-              <ControlButton icon="🚀" label="BOOST"   kind="command" onSuccess="+0.5 km" delayMs={[1000, 1600]} />
-              <ControlButton icon="🛑" label="FREIO"   kind="command" onSuccess="−0.3 km" delayMs={[900, 1400]}  />
-              <ControlButton icon="↔"  label="CORREÇÃO" kind="command" onSuccess="OK"      delayMs={[700, 1100]} />
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <SectionHeader num="04" title="SENSORES" />
-            <View style={styles.grid}>
-              <ControlButton icon="📷" label="CÂMERA"  kind="toggle" />
-              <ControlButton icon="◎"  label="RADAR"   kind="toggle" />
-              <ControlButton icon="◈"  label="ESPECTRO" kind="toggle" />
-            </View>
-          </View>
-
+          {/* Orbital correction CTA */}
           <View style={[styles.section, { marginBottom: 8 }]}>
-            <SectionHeader num="⚠" title="EMERGÊNCIA" />
-            <EmergencyButton />
+            <OrbitalCorrectionButton color={color} />
           </View>
 
         </ScrollView>
@@ -319,142 +344,113 @@ export function SatelliteControlSheet({ noradId, onClose }: SatelliteControlShee
   )
 }
 
-// ─── styles ────────────────────────────────────────────────────────────────────
+// ─── illustration styles ───────────────────────────────────────────────────────
+
+const illus = StyleSheet.create({
+  root:         { alignItems: 'center', justifyContent: 'center', height: 130, position: 'relative' },
+  glow:         { position: 'absolute', width: 160, height: 80, borderRadius: 80 },
+  mainRow:      { flexDirection: 'row', alignItems: 'center' },
+  solarArray:   { width: 64, height: 36, borderWidth: StyleSheet.hairlineWidth, borderRadius: 3, flexDirection: 'row', overflow: 'hidden' },
+  solarCell:    { flex: 1, borderRightWidth: StyleSheet.hairlineWidth },
+  arm:          { width: 14, height: 2 },
+  body:         { width: 44, height: 52, borderWidth: 1, borderRadius: 6, alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 },
+  bodyPorthole: { width: 10, height: 10, borderRadius: 5, borderWidth: 1 },
+  bodyCenter:   { width: 24, height: 18, borderRadius: 3, alignItems: 'center', justifyContent: 'center' },
+  bodyIcon:     { fontSize: 10 },
+  antennaPost:  { width: 2, height: 14, borderRadius: 1, marginBottom: 2 },
+  antennaDish:  { width: 22, height: 12, borderRadius: 11, borderWidth: 1, borderTopWidth: 0, marginBottom: 4, transform: [{ scaleY: -1 }] },
+  thrusterMount:{ width: 16, height: 4, borderRadius: 2, marginTop: 4 },
+  thrusterNozzle:{ width: 22, height: 12, borderWidth: 1, borderRadius: 3, borderTopWidth: 0, marginTop: 1 },
+  // rocket body
+  rocketNose:   { width: 28, height: 18, borderTopLeftRadius: 14, borderTopRightRadius: 14, borderWidth: 1, borderBottomWidth: 0 },
+  rocketBody:   { width: 38, height: 56, borderWidth: 1, borderRadius: 4, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  rocketLabel:  { fontSize: 18 },
+  rocketSub:    { fontSize: 7, fontWeight: '700', letterSpacing: 1 },
+  rocketNozzle: { width: 30, height: 14, borderTopWidth: 0, borderWidth: 1, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 },
+  // debris
+  debrisIcon:   { fontSize: 52, marginBottom: 4 },
+  debrisLabel:  { fontSize: 8, fontWeight: '700', letterSpacing: 1.5, textAlign: 'center' },
+})
+
+// ─── main styles ───────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+    bottom: TAB_BAR_HEIGHT,
+    left: 0, right: 0,
     height: SHEET_HEIGHT,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     overflow: 'hidden',
     zIndex: 25,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 20,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.55,
+    shadowRadius: 24,
+    elevation: 24,
   },
-  topColorBar: { height: 3, width: '100%' },
-  blur: { flex: 1 },
+  topBar:   { height: 3 },
+  blur:     { flex: 1 },
+  handleArea: { alignItems: 'center', paddingTop: 14, paddingBottom: 8, gap: 5 },
+  handle:   { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)' },
+  sheetLabel: { color: 'rgba(255,255,255,0.22)', fontSize: 9, fontWeight: '700', letterSpacing: 2.5 },
 
-  handleArea: { alignItems: 'center', paddingTop: 14, paddingBottom: 10, gap: 6 },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)' },
-  sheetLabel: { color: 'rgba(255,255,255,0.25)', fontSize: 9, fontWeight: '700', letterSpacing: 2.5 },
+  scroll:        { flex: 1 },
+  scrollContent: { paddingBottom: 32 },
 
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 48 },
+  illustrationArea: { alignItems: 'center', paddingVertical: 4 },
 
-  // header
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 18,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
-  },
-  headerTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 12 },
-  satName: { color: '#fff', fontSize: 24, fontWeight: '800', letterSpacing: -0.5, flex: 1, lineHeight: 30 },
-  closeBtn: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center', justifyContent: 'center', marginTop: 3,
-  },
-  closeBtnText: { color: 'rgba(255,255,255,0.45)', fontSize: 13 },
-  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  typeBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderRadius: 8, borderWidth: 1,
-    paddingHorizontal: 10, paddingVertical: 5,
-  },
-  typeDot: { width: 6, height: 6, borderRadius: 3 },
-  typeBadgeText: { fontSize: 9, fontWeight: '700', letterSpacing: 1.3 },
-  orbitBadge: {
-    borderRadius: 8, borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 10, paddingVertical: 5,
-  },
-  orbitBadgeText: { color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: '700', letterSpacing: 1.3 },
-  noradId: { color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: '500', letterSpacing: 1 },
+  header: { paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  headerText: { flex: 1, gap: 8 },
+  satName: { color: '#fff', fontSize: 20, fontWeight: '800', letterSpacing: -0.4, lineHeight: 26 },
+  badgeRow: { flexDirection: 'row', gap: 7 },
+  typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 7, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 4 },
+  typeDot:  { width: 6, height: 6, borderRadius: 3 },
+  typeBadgeText: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
+  orbitBadge: { borderRadius: 7, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 9, paddingVertical: 4 },
+  orbitBadgeText: { color: 'rgba(255,255,255,0.5)', fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
+  noradId: { color: 'rgba(255,255,255,0.22)', fontSize: 10, letterSpacing: 1 },
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  closeBtnText: { color: 'rgba(255,255,255,0.4)', fontSize: 13 },
 
-  // HUD telemetry
-  hudCard: {
-    marginHorizontal: 16,
-    marginTop: 16, marginBottom: 4,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,229,255,0.03)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,229,255,0.12)',
-    paddingVertical: 14, paddingHorizontal: 12,
-    gap: 10,
-  },
-  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00E5FF' },
-  liveText: { color: '#00E5FF', fontSize: 8, fontWeight: '800', letterSpacing: 2 },
-  hudRow: { flexDirection: 'row', alignItems: 'center' },
-  hudSep: { width: StyleSheet.hairlineWidth, height: 32, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 2 },
-  hudCol: { flex: 1, alignItems: 'center', gap: 5 },
-  hudLabel: { color: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: '700', letterSpacing: 1.8 },
-  hudValue: { color: '#00E5FF', fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
+  // telemetry
+  telemetry: { marginHorizontal: 16, marginVertical: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(0,229,255,0.03)', borderWidth: StyleSheet.hairlineWidth },
+  liveDot:   { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00E5FF' },
+  telemetryDivider: { fontSize: 12 },
+  telemetryItem: {},
+  telemetryKey: { color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '600', letterSpacing: 0.5 },
+  telemetryVal: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
 
   // section
-  section: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sectionNum: { color: 'rgba(255,255,255,0.2)', fontSize: 9, fontWeight: '800', letterSpacing: 1, width: 18 },
-  sectionTitle: { color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: '700', letterSpacing: 2 },
-  sectionLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.08)' },
+  section: { paddingHorizontal: 16, paddingTop: 14, gap: 10 },
+  sectionLabel: { color: 'rgba(255,255,255,0.28)', fontSize: 9, fontWeight: '700', letterSpacing: 2 },
 
-  // control button
-  grid: { flexDirection: 'row', gap: 8 },
-  btnWrap: { flex: 1 },
-  btn: {
-    height: 88,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    overflow: 'hidden',
+  // mode selector
+  modeRow: { flexDirection: 'row', gap: 8 },
+  modeBtnWrap: { flex: 1 },
+  modeBtn: { paddingVertical: 10, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)', alignItems: 'center' },
+  modeBtnText: { color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '700', letterSpacing: 1.5 },
+
+  // system panels
+  sysPanelRow: { flexDirection: 'row', gap: 8 },
+  sysPanel: { flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 12, gap: 5, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.08)' },
+  sysPanelTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sysPanelIcon: { fontSize: 18 },
+  sysPanelDot: { width: 6, height: 6, borderRadius: 3 },
+  sysPanelTitle: { color: 'rgba(255,255,255,0.4)', fontSize: 8, fontWeight: '700', letterSpacing: 1.5 },
+  sysPanelValue: { fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
+
+  // orbital correction
+  correctionWrap: { width: '100%' },
+  correctionBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 56, borderRadius: 16, borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)', overflow: 'hidden', gap: 10,
   },
-  btnOn:     { backgroundColor: 'rgba(0,229,255,0.1)',   borderColor: 'rgba(0,229,255,0.3)' },
-  btnDone:   { backgroundColor: 'rgba(52,199,89,0.1)',   borderColor: 'rgba(52,199,89,0.3)' },
-  btnDanger: { backgroundColor: 'rgba(255,59,48,0.06)',  borderColor: 'rgba(255,59,48,0.25)' },
-  btnAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 2 },
-  btnIcon:      { fontSize: 24, color: 'rgba(255,255,255,0.6)' },
-  btnIconOn:    { color: '#00E5FF' },
-  btnIconDone:  { color: '#34C759' },
-  btnLabel:     { fontSize: 8, fontWeight: '700', letterSpacing: 1.5, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' },
-  btnLabelOn:   { color: '#00E5FF' },
-  btnLabelDone: { color: '#34C759' },
-
-  // pulse ring
-  pulseRing: { borderRadius: 14, borderWidth: 1.5, borderColor: '#00E5FF' },
-  pulseRingDanger: { borderColor: '#FF3B30' },
-
-  // emergency button
-  emergencyWrap: { width: '100%' },
-  emergencyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    height: 68,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,59,48,0.07)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,59,48,0.3)',
-    overflow: 'hidden',
-    paddingHorizontal: 18,
-  },
-  emergencyBtnDone: { backgroundColor: 'rgba(52,199,89,0.08)', borderColor: 'rgba(52,199,89,0.3)' },
-  emergencyStripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#FF3B30' },
-  emergencyIcon: { fontSize: 22, color: '#FF3B30' },
-  emergencyText: { flex: 1, gap: 3 },
-  emergencyLabel: { color: '#FF3B30', fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-  emergencySub: { color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 0.5 },
-  emergencyArrow: { color: 'rgba(255,59,48,0.5)', fontSize: 22, fontWeight: '300' },
+  correctionBtnDone: { backgroundColor: 'rgba(52,199,89,0.08)', borderColor: 'rgba(52,199,89,0.4)' },
+  correctionPulse: { borderRadius: 16, borderWidth: 1.5 },
+  correctionText: { fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
+  correctionArrow: { fontSize: 20, fontWeight: '300' },
 })
