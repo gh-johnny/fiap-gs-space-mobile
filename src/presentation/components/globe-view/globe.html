@@ -6,7 +6,7 @@
   <title>Orbital Guardian Globe</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: transparent; overflow: hidden; width: 100vw; height: 100vh; }
+    body { background: #000814; overflow: hidden; width: 100vw; height: 100vh; }
     #globe { width: 100%; height: 100%; }
     #overlay {
       position: absolute; inset: 0;
@@ -28,9 +28,20 @@
       ROCKET_BODY: '#FF6B35',
     };
 
+    // Single-line sweep: dashLen=1 + dashGap=1 → full arc draws in over animTime/2, then rebuilds
+    const ARC_ANIM_TIME = 6000;
+    const CONJUNCTION_STYLES = {
+      CRITICAL: { color: '#FF3B30', stroke: 1.5, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.35 },
+      WARNING:  { color: '#FF9500', stroke: 1.0, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.28 },
+      INFO:     { color: '#FFD60A', stroke: 0.7, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.22 },
+    };
+
+    // Highlighted arc — same single-line sweep, thicker stroke
+    const ALERT_ARC = { color: '#FF3B30', stroke: 2.5, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.32 };
+
     const world = Globe()
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-      .backgroundColor('rgba(0,0,0,0)')
+      .backgroundColor('#000814')
       .atmosphereColor('#1a6ecd')
       .atmosphereAltitude(0.18)
       .pointAltitude('alt')
@@ -39,62 +50,143 @@
       .pointLabel('label')
       .arcColor('color')
       .arcStroke('stroke')
-      .arcDashLength(0.4)
-      .arcDashGap(0.15)
-      .arcDashAnimateTime(2000)(document.getElementById('globe'));
+      .arcAltitude('arcAlt')
+      .arcDashLength(d => d.dashLen)
+      .arcDashGap(d => d.dashGap)
+      .arcDashAnimateTime(d => d.animTime)
+      (document.getElementById('globe'));
 
     world.controls().autoRotate = true;
     world.controls().autoRotateSpeed = 0.4;
-    world.controls().enableZoom = false;
+    world.controls().enableZoom = true;
+    world.controls().minDistance = 120;
+    world.controls().maxDistance = 550;
 
-    let pointsData = [];
-    let arcsData = [];
+    // Premium feel: pause rotation while user interacts, resume 3s after release
+    var resumeTimer = null;
+    world.controls().addEventListener('start', function () {
+      world.controls().autoRotate = false;
+      clearTimeout(resumeTimer);
+    });
+    world.controls().addEventListener('end', function () {
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(function () {
+        world.controls().autoRotate = true;
+      }, 3000);
+    });
 
-    function render() {
+    var pointsData = [];
+    var conjunctionPairs = [];  // [{noradIdA, noradIdB, severity}]
+    var backgroundArcs = [];    // built from conjunctionPairs + pointsData
+    var highlightedArcs = [];   // active alert arc
+    var highlightedPair = null; // {noradIdA, noradIdB} when an alert arc is active
+
+    function renderPoints() {
       world.pointsData(pointsData);
-      world.arcsData(arcsData);
     }
+
+    // Arcs rendered independently — never restarts on position updates
+    function renderArcs() {
+      world.arcsData(backgroundArcs.concat(highlightedArcs));
+    }
+
+    function buildBackgroundArcs() {
+      backgroundArcs = conjunctionPairs.reduce(function (acc, pair) {
+        var posA = pointsData.find(function (p) { return String(p.label) === String(pair.noradIdA); });
+        var posB = pointsData.find(function (p) { return String(p.label) === String(pair.noradIdB); });
+        if (posA && posB) {
+          var style = CONJUNCTION_STYLES[pair.severity] || CONJUNCTION_STYLES.INFO;
+          acc.push({
+            startLat: posA.lat, startLng: posA.lng,
+            endLat: posB.lat, endLng: posB.lng,
+            color: style.color, stroke: style.stroke, arcAlt: style.arcAlt,
+            dashLen: style.dashLen, dashGap: style.dashGap, animTime: style.animTime,
+          });
+        }
+        return acc;
+      }, []);
+    }
+
+    // Rebuild at animTime/2 — exactly when the single line reaches the other end
+    setInterval(function () {
+      if (conjunctionPairs.length === 0) return;
+      buildBackgroundArcs();
+      if (highlightedPair) {
+        var hA = pointsData.find(function (p) { return String(p.label) === String(highlightedPair.noradIdA); });
+        var hB = pointsData.find(function (p) { return String(p.label) === String(highlightedPair.noradIdB); });
+        if (hA && hB) {
+          highlightedArcs = [{
+            startLat: hA.lat, startLng: hA.lng,
+            endLat: hB.lat, endLng: hB.lng,
+            color: ALERT_ARC.color, stroke: ALERT_ARC.stroke, arcAlt: ALERT_ARC.arcAlt,
+            dashLen: ALERT_ARC.dashLen, dashGap: ALERT_ARC.dashGap, animTime: ALERT_ARC.animTime,
+          }];
+        }
+      }
+      renderArcs();
+    }, ARC_ANIM_TIME);
 
     window.handleGlobeCommand = function (msg) {
       switch (msg.type) {
+
         case 'UPDATE_POSITIONS':
-          pointsData = (msg.payload || []).map(p => ({
-            lat: p.lat, lng: p.lng, alt: Math.min(p.alt / 6371, 0.15),
-            color: POINT_COLORS[p.color] || POINT_COLORS.OPERATIONAL_SATELLITE,
-            radius: 0.3,
-            label: String(p.noradId),
-          }));
-          render();
+          pointsData = (msg.payload || []).map(function (p) {
+            return {
+              lat: p.lat, lng: p.lng,
+              alt: Math.min(p.alt / 6371, 0.15),
+              originalColor: p.color,
+              color: p.color,
+              radius: 0.3,
+              label: String(p.noradId),
+            };
+          });
+          renderPoints();
+          // Arcs are rebuilt by the periodic interval — never restart animation here
+          break;
+
+        case 'SET_CONJUNCTION_PAIRS':
+          conjunctionPairs = msg.payload || [];
+          buildBackgroundArcs();
+          renderArcs();
           break;
 
         case 'HIGHLIGHT_CONJUNCTION': {
-          const { noradIdA, noradIdB, arc } = msg.payload;
-          const posA = pointsData.find(p => String(p.label) === String(noradIdA));
-          const posB = pointsData.find(p => String(p.label) === String(noradIdB));
+          var noradIdA = msg.payload.noradIdA;
+          var noradIdB = msg.payload.noradIdB;
+          highlightedPair = { noradIdA: noradIdA, noradIdB: noradIdB };
+          var posA = pointsData.find(function (p) { return String(p.label) === String(noradIdA); });
+          var posB = pointsData.find(function (p) { return String(p.label) === String(noradIdB); });
           if (posA && posB) {
-            arcsData = [{
+            highlightedArcs = [{
               startLat: posA.lat, startLng: posA.lng,
               endLat: posB.lat, endLng: posB.lng,
-              color: arc.color, stroke: arc.stroke,
+              color: ALERT_ARC.color, stroke: ALERT_ARC.stroke, arcAlt: ALERT_ARC.arcAlt,
+              dashLen: ALERT_ARC.dashLen, dashGap: ALERT_ARC.dashGap, animTime: ALERT_ARC.animTime,
             }];
-            pointsData = pointsData.map(p =>
-              String(p.label) === String(noradIdA) || String(p.label) === String(noradIdB)
-                ? { ...p, radius: 0.6, color: '#FF3B30' }
-                : p
-            );
+            pointsData = pointsData.map(function (p) {
+              return String(p.label) === String(noradIdA) || String(p.label) === String(noradIdB)
+                ? Object.assign({}, p, { radius: 0.6, color: '#FF3B30' })
+                : p;
+            });
           }
-          render();
+          renderPoints();
+          renderArcs();
           break;
         }
 
         case 'CLEAR_HIGHLIGHT':
-          arcsData = [];
-          render();
+          highlightedArcs = [];
+          highlightedPair = null;
+          pointsData = pointsData.map(function (p) {
+            return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
+          });
+          renderPoints();
+          renderArcs();
           break;
 
         case 'DIM_GLOBE':
           document.getElementById('overlay').style.background =
-            'rgba(0,0,0,' + (msg.payload.opacity ?? 0.5) + ')';
+            'rgba(0,0,0,' + (msg.payload.opacity != null ? msg.payload.opacity : 0.5) + ')';
           break;
 
         case 'UNDIM_GLOBE':
@@ -105,7 +197,7 @@
 
     window.addEventListener('message', function (event) {
       try {
-        const msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        var msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         window.handleGlobeCommand(msg);
       } catch (_) {}
     });

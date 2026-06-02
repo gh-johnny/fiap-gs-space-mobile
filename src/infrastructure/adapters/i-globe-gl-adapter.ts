@@ -3,6 +3,7 @@ import { ConjunctionEvent } from '@/domain/entities'
 
 export interface IGlobeGlAdapter {
   updatePositions(positions: OrbitPosition[]): void
+  showConjunctionPairs(events: ConjunctionEvent[]): void
   highlightConjunction(event: ConjunctionEvent): void
   clearHighlight(): void
   dimGlobe(opacity: number): void

@@ -3,12 +3,7 @@ import { WebView } from 'react-native-webview'
 import { IGlobeGlAdapter } from './i-globe-gl-adapter'
 import { OrbitPosition } from '@/domain/usecases/propagate-orbits'
 import { ConjunctionEvent } from '@/domain/entities'
-import type { GlobePointDataExternal, GlobeArcDataExternal } from './globe-gl-external-types'
-
-const POINT_RADIUS_DEFAULT = 0.3
-const POINT_RADIUS_HIGHLIGHTED = 0.6
-const ARC_STROKE = 1.5
-const CONJUNCTION_COLOR = '#FF3B30'
+import type { GlobePointDataExternal } from './globe-gl-external-types'
 
 const OBJECT_TYPE_COLORS: Record<string, string> = {
   OPERATIONAL_SATELLITE: '#00E5FF',
@@ -23,32 +18,29 @@ export class GlobeGlAdapter implements IGlobeGlAdapter {
     const points: GlobePointDataExternal[] = positions.map((p) => ({
       lat: p.lat,
       lng: p.lng,
-      alt: p.alt / 6371, // normalizado para unidades de raio terrestre
+      alt: p.alt / 6371,
       color: OBJECT_TYPE_COLORS['OPERATIONAL_SATELLITE']!,
-      radius: POINT_RADIUS_DEFAULT,
+      radius: 0.3,
       noradId: p.noradId.value,
     }))
-
     this.postMessage({ type: 'UPDATE_POSITIONS', payload: points })
   }
 
-  highlightConjunction(event: ConjunctionEvent): void {
-    const arc: GlobeArcDataExternal = {
-      startLat: 0, // preenchido pelo globe.html via noradId
-      startLng: 0,
-      endLat: 0,
-      endLng: 0,
-      color: CONJUNCTION_COLOR,
-      stroke: ARC_STROKE,
-    }
+  showConjunctionPairs(events: ConjunctionEvent[]): void {
+    const pairs = events.map((e) => ({
+      noradIdA: e.objectA.noradId.value,
+      noradIdB: e.objectB.noradId.value,
+      severity: e.severity,
+    }))
+    this.postMessage({ type: 'SET_CONJUNCTION_PAIRS', payload: pairs })
+  }
 
+  highlightConjunction(event: ConjunctionEvent): void {
     this.postMessage({
       type: 'HIGHLIGHT_CONJUNCTION',
       payload: {
         noradIdA: event.objectA.noradId.value,
         noradIdB: event.objectB.noradId.value,
-        arc,
-        pointRadius: POINT_RADIUS_HIGHLIGHTED,
       },
     })
   }

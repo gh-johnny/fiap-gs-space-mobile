@@ -4,9 +4,11 @@ import { BlurView } from 'expo-blur'
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import { OrbitalAlert } from '@/domain/entities/orbital-alert'
 import type { Severity } from '@/domain/value-objects'
+import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 
 interface AlertCardProps {
   alert: OrbitalAlert
+  onPress: () => void
   onAcknowledge: () => void
   onDismiss: () => void
   visible: boolean
@@ -30,7 +32,7 @@ const RECOMMENDATIONS: Record<Severity, string> = {
   INFO: 'Situação sob controle — continuar monitoramento',
 }
 
-export function AlertCard({ alert, onAcknowledge, onDismiss, visible }: AlertCardProps) {
+export function AlertCard({ alert, onPress, onAcknowledge, onDismiss, visible }: AlertCardProps) {
   const { conjunctionEvent: event } = alert
   const severity = event.severity
 
@@ -41,39 +43,47 @@ export function AlertCard({ alert, onAcknowledge, onDismiss, visible }: AlertCar
 
   return (
     <Animated.View style={[styles.container, animStyle]}>
-      <BlurView intensity={40} tint="dark" style={styles.blur}>
-        <View style={[styles.severityBar, { backgroundColor: SEVERITY_COLORS[severity] }]} />
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+        <BlurView intensity={40} tint="dark" style={styles.blur}>
+          <View style={[styles.severityBar, { backgroundColor: SEVERITY_COLORS[severity] }]} />
 
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={[styles.severityLabel, { color: SEVERITY_COLORS[severity] }]}>
-              {SEVERITY_LABELS[severity]}
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Text style={[styles.severityLabel, { color: SEVERITY_COLORS[severity] }]}>
+                {SEVERITY_LABELS[severity]}
+              </Text>
+              <View style={styles.headerRight}>
+                <Text style={styles.detailHint}>VER DETALHES ›</Text>
+                <TouchableOpacity onPress={onDismiss} hitSlop={12}>
+                  <Text style={styles.closeBtn}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <Text style={styles.objects}>
+              {event.objectA.name} × {event.objectB.name}
             </Text>
-            <TouchableOpacity onPress={onDismiss} hitSlop={12}>
-              <Text style={styles.closeBtn}>✕</Text>
+
+            <View style={styles.metrics}>
+              <MetricRow label="Pc" value={event.pc.toScientificNotation()} />
+              <MetricRow label="Distância" value={event.missDistance.toDisplayString()} />
+              <MetricRow label="TCPA" value={event.tcpa.toDisplayString()} />
+              <MetricRow label="Janela" value={event.tcpa.toUtcString()} />
+            </View>
+
+            <Text style={styles.recommendation}>{RECOMMENDATIONS[severity]}</Text>
+
+            <TouchableOpacity
+              style={[styles.ackBtn, { borderColor: SEVERITY_COLORS[severity] }]}
+              onPress={onAcknowledge}
+            >
+              <Text style={[styles.ackBtnText, { color: SEVERITY_COLORS[severity] }]}>
+                RECONHECER
+              </Text>
             </TouchableOpacity>
           </View>
-
-          <Text style={styles.objects}>
-            {event.objectA.name} × {event.objectB.name}
-          </Text>
-
-          <View style={styles.metrics}>
-            <MetricRow label="Pc" value={event.pc.toScientificNotation()} />
-            <MetricRow label="Distância" value={event.missDistance.toDisplayString()} />
-            <MetricRow label="TCPA" value={event.tcpa.toDisplayString()} />
-            <MetricRow label="Janela" value={event.tcpa.toUtcString()} />
-          </View>
-
-          <Text style={styles.recommendation}>{RECOMMENDATIONS[severity]}</Text>
-
-          <TouchableOpacity style={[styles.ackBtn, { borderColor: SEVERITY_COLORS[severity] }]} onPress={onAcknowledge}>
-            <Text style={[styles.ackBtnText, { color: SEVERITY_COLORS[severity] }]}>
-              RECONHECER
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </BlurView>
+        </BlurView>
+      </TouchableOpacity>
     </Animated.View>
   )
 }
@@ -90,19 +100,22 @@ function MetricRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 32,
+    bottom: TAB_BAR_HEIGHT + 12,
     left: 16,
     right: 16,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
+    zIndex: 15,
   },
   blur: { flexDirection: 'row' },
   severityBar: { width: 4 },
   content: { flex: 1, padding: 16, gap: 8 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   severityLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  detailHint: { color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: 0.5 },
   closeBtn: { color: 'rgba(255,255,255,0.4)', fontSize: 16 },
   objects: { color: '#fff', fontSize: 15, fontWeight: '600' },
   metrics: { gap: 4 },
