@@ -22,38 +22,67 @@
 
   <script src="https://unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
   <script>
-    const POINT_COLORS = {
-      OPERATIONAL_SATELLITE: '#00E5FF',
-      DEBRIS: '#FF9500',
-      ROCKET_BODY: '#FF6B35',
-    };
-
-    // Single-line sweep: dashLen=1 + dashGap=1 → full arc draws in over animTime/2, then rebuilds
+    // Single-line sweep: dashLen=1 + dashGap=1 → full arc draws over animTime/2, then vanishes
     const ARC_ANIM_TIME = 6000;
     const CONJUNCTION_STYLES = {
       CRITICAL: { color: '#FF3B30', stroke: 1.5, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.35 },
       WARNING:  { color: '#FF9500', stroke: 1.0, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.28 },
       INFO:     { color: '#FFD60A', stroke: 0.7, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.22 },
     };
-
-    // Highlighted arc — same single-line sweep, thicker stroke
     const ALERT_ARC = { color: '#FF3B30', stroke: 2.5, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.32 };
+
+    // dot size in px for each state (radius field × 20)
+    // normal=0.3→6px  dimmed=0.15→3px  highlighted=0.6→12px  selected=1.2→24px
+    function dotPx(radius) { return Math.round(radius * 20); }
+
+    function makeDotElement(d) {
+      var px   = dotPx(d.radius);
+      var glow = Math.round(px * 2);
+      var el   = document.createElement('div');
+      el.style.cssText = [
+        'width:'          + px + 'px',
+        'height:'         + px + 'px',
+        'border-radius:50%',
+        'background-color:' + d.color,
+        'box-shadow:0 0 ' + glow + 'px ' + d.color + 'aa',
+        'cursor:pointer',
+        'pointer-events:all',
+        'transform:translate(-50%,-50%)',  // center the dot on the coord
+      ].join(';');
+      function fire(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'SATELLITE_TAPPED',
+            payload: { noradId: d.label },
+          }));
+        }
+      }
+      el.addEventListener('click',    fire);
+      el.addEventListener('touchend', fire);
+      return el;
+    }
 
     const world = Globe()
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundColor('#000814')
       .atmosphereColor('#1a6ecd')
       .atmosphereAltitude(0.18)
-      .pointAltitude('alt')
-      .pointColor('color')
-      .pointRadius('radius')
-      .pointLabel('label')
+      // Satellites: HTML dots at orbital altitude — no vertical bar/column
+      .htmlElementsData([])
+      .htmlElement(makeDotElement)
+      .htmlLat('lat')
+      .htmlLng('lng')
+      .htmlAltitude('alt')
+      // Arcs
       .arcColor('color')
       .arcStroke('stroke')
       .arcAltitude('arcAlt')
       .arcDashLength(d => d.dashLen)
       .arcDashGap(d => d.dashGap)
       .arcDashAnimateTime(d => d.animTime)
+      // Rings on surface below operational satellites
       .ringsData([])
       .ringColor('color')
       .ringMaxRadius(2.5)
@@ -67,7 +96,6 @@
     world.controls().minDistance = 120;
     world.controls().maxDistance = 550;
 
-    // Premium feel: pause rotation while user interacts, resume 3s after release
     var resumeTimer = null;
     world.controls().addEventListener('start', function () {
       world.controls().autoRotate = false;
@@ -80,36 +108,34 @@
       }, 3000);
     });
 
-    var selectedNoradId = null;
+    var selectedNoradId  = null;
+    var objectsData      = [];
+    var conjunctionPairs = [];
+    var backgroundArcs   = [];
+    var highlightedArcs  = [];
+    var highlightedPair  = null;
 
-    var pointsData = [];
-    var conjunctionPairs = [];  // [{noradIdA, noradIdB, severity}]
-    var backgroundArcs = [];    // built from conjunctionPairs + pointsData
-    var highlightedArcs = [];   // active alert arc
-    var highlightedPair = null; // {noradIdA, noradIdB} when an alert arc is active
-
-    function renderPoints() {
-      world.pointsData(pointsData);
-      // Rings only on operational satellites (cyan) — give depth and "alive" feel
-      world.ringsData(pointsData.filter(function(p) {
+    function renderObjects() {
+      world.htmlElementsData(objectsData);
+      // Rings only under operational satellites (cyan)
+      world.ringsData(objectsData.filter(function(p) {
         return p.originalColor === '#00E5FF';
       }));
     }
 
-    // Arcs rendered independently — never restarts on position updates
     function renderArcs() {
       world.arcsData(backgroundArcs.concat(highlightedArcs));
     }
 
     function buildBackgroundArcs() {
       backgroundArcs = conjunctionPairs.reduce(function (acc, pair) {
-        var posA = pointsData.find(function (p) { return String(p.label) === String(pair.noradIdA); });
-        var posB = pointsData.find(function (p) { return String(p.label) === String(pair.noradIdB); });
+        var posA = objectsData.find(function (p) { return String(p.label) === String(pair.noradIdA); });
+        var posB = objectsData.find(function (p) { return String(p.label) === String(pair.noradIdB); });
         if (posA && posB) {
           var style = CONJUNCTION_STYLES[pair.severity] || CONJUNCTION_STYLES.INFO;
           acc.push({
             startLat: posA.lat, startLng: posA.lng,
-            endLat: posB.lat, endLng: posB.lng,
+            endLat: posB.lat,   endLng: posB.lng,
             color: style.color, stroke: style.stroke, arcAlt: style.arcAlt,
             dashLen: style.dashLen, dashGap: style.dashGap, animTime: style.animTime,
           });
@@ -118,39 +144,30 @@
       }, []);
     }
 
-    world.onPointClick(function(point) {
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'SATELLITE_TAPPED',
-          payload: { noradId: point.label }
-        }));
-      }
-    });
-
-    // Rebuild at animTime/2 — exactly when the single line reaches the other end
+    // Fires at animTime/2 + 300ms — just into the gap phase, glitch-free rebuild
     setInterval(function () {
       if (conjunctionPairs.length === 0) return;
       buildBackgroundArcs();
       if (highlightedPair) {
-        var hA = pointsData.find(function (p) { return String(p.label) === String(highlightedPair.noradIdA); });
-        var hB = pointsData.find(function (p) { return String(p.label) === String(highlightedPair.noradIdB); });
+        var hA = objectsData.find(function (p) { return String(p.label) === String(highlightedPair.noradIdA); });
+        var hB = objectsData.find(function (p) { return String(p.label) === String(highlightedPair.noradIdB); });
         if (hA && hB) {
           highlightedArcs = [{
             startLat: hA.lat, startLng: hA.lng,
-            endLat: hB.lat, endLng: hB.lng,
+            endLat: hB.lat,   endLng: hB.lng,
             color: ALERT_ARC.color, stroke: ALERT_ARC.stroke, arcAlt: ALERT_ARC.arcAlt,
             dashLen: ALERT_ARC.dashLen, dashGap: ALERT_ARC.dashGap, animTime: ALERT_ARC.animTime,
           }];
         }
       }
       renderArcs();
-    }, ARC_ANIM_TIME);
+    }, ARC_ANIM_TIME / 2 + 300);
 
     window.handleGlobeCommand = function (msg) {
       switch (msg.type) {
 
         case 'UPDATE_POSITIONS':
-          pointsData = (msg.payload || []).map(function (p) {
+          objectsData = (msg.payload || []).map(function (p) {
             return {
               lat: p.lat, lng: p.lng,
               alt: Math.max(0.04, Math.min(p.alt * 2, 0.38)),
@@ -160,8 +177,8 @@
               label: String(p.noradId),
             };
           });
-          renderPoints();
-          // Arcs are rebuilt by the periodic interval — never restart animation here
+          renderObjects();
+          // Arcs rebuilt by interval — never restart animation on position tick
           break;
 
         case 'SET_CONJUNCTION_PAIRS':
@@ -174,33 +191,33 @@
           var noradIdA = msg.payload.noradIdA;
           var noradIdB = msg.payload.noradIdB;
           highlightedPair = { noradIdA: noradIdA, noradIdB: noradIdB };
-          var posA = pointsData.find(function (p) { return String(p.label) === String(noradIdA); });
-          var posB = pointsData.find(function (p) { return String(p.label) === String(noradIdB); });
+          var posA = objectsData.find(function (p) { return String(p.label) === String(noradIdA); });
+          var posB = objectsData.find(function (p) { return String(p.label) === String(noradIdB); });
           if (posA && posB) {
             highlightedArcs = [{
               startLat: posA.lat, startLng: posA.lng,
-              endLat: posB.lat, endLng: posB.lng,
+              endLat: posB.lat,   endLng: posB.lng,
               color: ALERT_ARC.color, stroke: ALERT_ARC.stroke, arcAlt: ALERT_ARC.arcAlt,
               dashLen: ALERT_ARC.dashLen, dashGap: ALERT_ARC.dashGap, animTime: ALERT_ARC.animTime,
             }];
-            pointsData = pointsData.map(function (p) {
+            objectsData = objectsData.map(function (p) {
               return String(p.label) === String(noradIdA) || String(p.label) === String(noradIdB)
                 ? Object.assign({}, p, { radius: 0.6, color: '#FF3B30' })
                 : p;
             });
           }
-          renderPoints();
+          renderObjects();
           renderArcs();
           break;
         }
 
         case 'CLEAR_HIGHLIGHT':
-          highlightedArcs = [];
-          highlightedPair = null;
-          pointsData = pointsData.map(function (p) {
+          highlightedArcs  = [];
+          highlightedPair  = null;
+          objectsData = objectsData.map(function (p) {
             return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
           });
-          renderPoints();
+          renderObjects();
           renderArcs();
           break;
 
@@ -215,21 +232,21 @@
 
         case 'SELECT_SATELLITE':
           selectedNoradId = String(msg.payload.noradId);
-          pointsData = pointsData.map(function(p) {
+          objectsData = objectsData.map(function(p) {
             if (String(p.label) === selectedNoradId) {
               return Object.assign({}, p, { radius: 1.2, color: '#FFFFFF' });
             }
             return Object.assign({}, p, { radius: 0.15 });
           });
-          renderPoints();
+          renderObjects();
           break;
 
         case 'DESELECT_SATELLITE':
           selectedNoradId = null;
-          pointsData = pointsData.map(function(p) {
+          objectsData = objectsData.map(function(p) {
             return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
           });
-          renderPoints();
+          renderObjects();
           break;
       }
     };
