@@ -20,16 +20,32 @@
   <div id="globe"></div>
   <div id="overlay"></div>
 
+  <!-- THREE.js loaded first so window.THREE is available for our custom lines -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="https://unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
   <script>
-    // ─── arc config ───────────────────────────────────────────────────────────
-    var ARC_ANIM_TIME = 6000;
+    // ─── conjunction line config ───────────────────────────────────────────────
     var CONJUNCTION_STYLES = {
-      CRITICAL: { color: '#FF3B30', stroke: 1.5, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.35 },
-      WARNING:  { color: '#FF9500', stroke: 1.0, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.28 },
-      INFO:     { color: '#FFD60A', stroke: 0.7, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.22 },
+      CRITICAL: { color: '#FF3B30', baseOpacity: 0.88 },
+      WARNING:  { color: '#FF9500', baseOpacity: 0.70 },
+      INFO:     { color: '#FFD60A', baseOpacity: 0.52 },
     };
-    var ALERT_ARC = { color: '#FF3B30', stroke: 2.5, dashLen: 1.0, dashGap: 1.0, animTime: ARC_ANIM_TIME, arcAlt: 0.32 };
+    var HIGHLIGHT_COLOR   = '#FF3B30';
+    var HIGHLIGHT_OPACITY = 0.95;
+
+    // ─── coordinate transform (three-globe convention) ────────────────────────
+    var GLOBE_R = 100; // globe.gl internal globe radius
+
+    function polar2Cart(lat, lng, alt) {
+      var phi   = (90 - lat) * Math.PI / 180;
+      var theta = (90 + lng) * Math.PI / 180;
+      var r     = GLOBE_R * (1 + alt);
+      return new THREE.Vector3(
+        -r * Math.sin(phi) * Math.cos(theta),
+         r * Math.cos(phi),
+         r * Math.sin(phi) * Math.sin(theta)
+      );
+    }
 
     // ─── dot element factory ──────────────────────────────────────────────────
     function makeDotElement(d) {
@@ -72,12 +88,6 @@
       .htmlLat('lat')
       .htmlLng('lng')
       .htmlAltitude('alt')
-      .arcColor('color')
-      .arcStroke('stroke')
-      .arcAltitude('arcAlt')
-      .arcDashLength(function(d) { return d.dashLen; })
-      .arcDashGap(function(d) { return d.dashGap; })
-      .arcDashAnimateTime(function(d) { return d.animTime; })
       (document.getElementById('globe'));
 
     world.controls().autoRotate      = true;
@@ -96,58 +106,79 @@
       resumeTimer = setTimeout(function () { world.controls().autoRotate = true; }, 3000);
     });
 
+    // ─── custom Three.js line layer ───────────────────────────────────────────
+    // Lines are added directly to globe.gl's scene, bypassing the arc layer.
+    // They connect satellite positions at orbital altitude — no surface contact.
+    var lineGroup = new THREE.Group();
+    world.scene().add(lineGroup);
+
+    function makeLine(posA, posB, color, opacity, isHighlight) {
+      var vA  = polar2Cart(posA.lat, posA.lng, posA.alt);
+      var vB  = polar2Cart(posB.lat, posB.lng, posB.alt);
+      var geo = new THREE.BufferGeometry().setFromPoints([vA, vB]);
+      var mat = new THREE.LineBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: opacity,
+      });
+      var line    = new THREE.Line(geo, mat);
+      line.userData.isHighlight  = !!isHighlight;
+      line.userData.baseOpacity  = opacity;
+      return line;
+    }
+
+    function rebuildLines() {
+      // Dispose and clear
+      while (lineGroup.children.length > 0) {
+        var c = lineGroup.children[0];
+        c.geometry.dispose();
+        c.material.dispose();
+        lineGroup.remove(c);
+      }
+
+      // Background conjunction lines
+      conjunctionPairs.forEach(function(pair) {
+        var posA = objectsData.find(function(p) { return String(p.label) === String(pair.noradIdA); });
+        var posB = objectsData.find(function(p) { return String(p.label) === String(pair.noradIdB); });
+        if (!posA || !posB) return;
+        var style = CONJUNCTION_STYLES[pair.severity] || CONJUNCTION_STYLES.INFO;
+        lineGroup.add(makeLine(posA, posB, style.color, style.baseOpacity, false));
+      });
+
+      // Highlighted line (drawn last → on top)
+      if (highlightedPair) {
+        var hA = objectsData.find(function(p) { return String(p.label) === String(highlightedPair.noradIdA); });
+        var hB = objectsData.find(function(p) { return String(p.label) === String(highlightedPair.noradIdB); });
+        if (hA && hB) {
+          lineGroup.add(makeLine(hA, hB, HIGHLIGHT_COLOR, HIGHLIGHT_OPACITY, true));
+        }
+      }
+    }
+
+    // Breathing pulse — background lines breathe gently, highlight line glows stronger
+    var _pulseT = 0;
+    setInterval(function () {
+      _pulseT += 0.04;
+      var sin = Math.sin(_pulseT);
+      lineGroup.children.forEach(function (line) {
+        if (line.userData.isHighlight) {
+          line.material.opacity = 0.80 + 0.15 * sin;
+        } else {
+          line.material.opacity = line.userData.baseOpacity * (0.75 + 0.25 * sin);
+        }
+      });
+    }, 50);
+
     // ─── state ────────────────────────────────────────────────────────────────
     var selectedNoradId  = null;
     var objectsData      = [];
     var conjunctionPairs = [];
-    var backgroundArcs   = [];
-    var highlightedArcs  = [];
     var highlightedPair  = null;
 
     // ─── render ───────────────────────────────────────────────────────────────
     function renderObjects() {
       world.htmlElementsData(objectsData);
     }
-
-    function renderArcs() {
-      world.arcsData(backgroundArcs.concat(highlightedArcs));
-    }
-
-    function buildBackgroundArcs() {
-      backgroundArcs = conjunctionPairs.reduce(function (acc, pair) {
-        var posA = objectsData.find(function (p) { return String(p.label) === String(pair.noradIdA); });
-        var posB = objectsData.find(function (p) { return String(p.label) === String(pair.noradIdB); });
-        if (posA && posB) {
-          var style = CONJUNCTION_STYLES[pair.severity] || CONJUNCTION_STYLES.INFO;
-          acc.push({
-            startLat: posA.lat, startLng: posA.lng,
-            endLat: posB.lat,   endLng: posB.lng,
-            color: style.color, stroke: style.stroke, arcAlt: style.arcAlt,
-            dashLen: style.dashLen, dashGap: style.dashGap, animTime: style.animTime,
-          });
-        }
-        return acc;
-      }, []);
-    }
-
-    // Fires at animTime/2 + 300ms — just into the gap phase, glitch-free arc rebuild
-    setInterval(function () {
-      if (conjunctionPairs.length === 0) return;
-      buildBackgroundArcs();
-      if (highlightedPair) {
-        var hA = objectsData.find(function (p) { return String(p.label) === String(highlightedPair.noradIdA); });
-        var hB = objectsData.find(function (p) { return String(p.label) === String(highlightedPair.noradIdB); });
-        if (hA && hB) {
-          highlightedArcs = [{
-            startLat: hA.lat, startLng: hA.lng,
-            endLat: hB.lat,   endLng: hB.lng,
-            color: ALERT_ARC.color, stroke: ALERT_ARC.stroke, arcAlt: ALERT_ARC.arcAlt,
-            dashLen: ALERT_ARC.dashLen, dashGap: ALERT_ARC.dashGap, animTime: ALERT_ARC.animTime,
-          }];
-        }
-      }
-      renderArcs();
-    }, ARC_ANIM_TIME / 2 + 300);
 
     // ─── command handler ──────────────────────────────────────────────────────
     window.handleGlobeCommand = function (msg) {
@@ -165,46 +196,35 @@
             };
           });
           renderObjects();
+          if (conjunctionPairs.length > 0) rebuildLines();
           break;
 
         case 'SET_CONJUNCTION_PAIRS':
           conjunctionPairs = msg.payload || [];
-          buildBackgroundArcs();
-          renderArcs();
+          rebuildLines();
           break;
 
         case 'HIGHLIGHT_CONJUNCTION': {
           var noradIdA = msg.payload.noradIdA;
           var noradIdB = msg.payload.noradIdB;
           highlightedPair = { noradIdA: noradIdA, noradIdB: noradIdB };
-          var posA = objectsData.find(function (p) { return String(p.label) === String(noradIdA); });
-          var posB = objectsData.find(function (p) { return String(p.label) === String(noradIdB); });
-          if (posA && posB) {
-            highlightedArcs = [{
-              startLat: posA.lat, startLng: posA.lng,
-              endLat: posB.lat,   endLng: posB.lng,
-              color: ALERT_ARC.color, stroke: ALERT_ARC.stroke, arcAlt: ALERT_ARC.arcAlt,
-              dashLen: ALERT_ARC.dashLen, dashGap: ALERT_ARC.dashGap, animTime: ALERT_ARC.animTime,
-            }];
-            objectsData = objectsData.map(function (p) {
-              return String(p.label) === String(noradIdA) || String(p.label) === String(noradIdB)
-                ? Object.assign({}, p, { radius: 0.6, color: '#FF3B30' })
-                : p;
-            });
-          }
+          objectsData = objectsData.map(function (p) {
+            return String(p.label) === String(noradIdA) || String(p.label) === String(noradIdB)
+              ? Object.assign({}, p, { radius: 0.6, color: '#FF3B30' })
+              : p;
+          });
           renderObjects();
-          renderArcs();
+          rebuildLines();
           break;
         }
 
         case 'CLEAR_HIGHLIGHT':
-          highlightedArcs = [];
           highlightedPair = null;
           objectsData = objectsData.map(function (p) {
             return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
           });
           renderObjects();
-          renderArcs();
+          rebuildLines();
           break;
 
         case 'DIM_GLOBE':
