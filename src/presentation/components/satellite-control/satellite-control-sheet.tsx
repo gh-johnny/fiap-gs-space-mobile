@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Pressable } from 'react-native'
 import Animated, {
   useAnimatedStyle,
@@ -19,7 +19,7 @@ interface Props {
   onClose: () => void
 }
 
-const SHEET_HEIGHT = 590
+const SHEET_HEIGHT = 700
 const CLOSE_THRESHOLD = 100
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -214,15 +214,12 @@ export function SatelliteControlSheet({ noradId, onClose }: Props) {
   const satellite = useOrbitalStore(s => s.satellites.find(sat => sat.noradId.value === Number(noradId)) ?? null)
   const position  = useOrbitalStore(s => s.positions.find(p => p.noradId.value === Number(noradId)) ?? null)
 
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
-
   const pan = Gesture.Pan()
     .onUpdate(e => { translateY.value = Math.max(0, e.translationY) })
     .onEnd(e => {
       if (e.translationY > CLOSE_THRESHOLD) {
         translateY.value = withSpring(SHEET_HEIGHT, { damping: 20 })
-        runOnJS(onCloseRef.current)()
+        runOnJS(onClose)()
       } else {
         translateY.value = withSpring(0, { damping: 22, stiffness: 190 })
       }
