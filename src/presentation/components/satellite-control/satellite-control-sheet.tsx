@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Pressable } from 'react-native'
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Pressable, useWindowDimensions } from 'react-native'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -19,7 +19,6 @@ interface Props {
   onClose: () => void
 }
 
-const SHEET_HEIGHT = 700
 const CLOSE_THRESHOLD = 100
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -205,7 +204,10 @@ function OrbitalCorrectionButton({ color }: { color: string }) {
 // ─── main sheet ────────────────────────────────────────────────────────────────
 
 export function SatelliteControlSheet({ noradId, onClose }: Props) {
-  const translateY = useSharedValue(SHEET_HEIGHT)
+  const { height: screenHeight } = useWindowDimensions()
+  const sheetHeight = Math.round(screenHeight * 0.80)
+
+  const translateY = useSharedValue(sheetHeight)
 
   useEffect(() => {
     translateY.value = withSpring(0, { damping: 22, stiffness: 190 })
@@ -218,7 +220,7 @@ export function SatelliteControlSheet({ noradId, onClose }: Props) {
     .onUpdate(e => { translateY.value = Math.max(0, e.translationY) })
     .onEnd(e => {
       if (e.translationY > CLOSE_THRESHOLD) {
-        translateY.value = withSpring(SHEET_HEIGHT, { damping: 20 })
+        translateY.value = withSpring(sheetHeight, { damping: 20 })
         runOnJS(onClose)()
       } else {
         translateY.value = withSpring(0, { damping: 22, stiffness: 190 })
@@ -235,7 +237,7 @@ export function SatelliteControlSheet({ noradId, onClose }: Props) {
   const vel     = position ? Math.sqrt(398600 / (6371 + position.alt)).toFixed(1) : null
 
   return (
-    <Animated.View style={[styles.container, animStyle]}>
+    <Animated.View style={[styles.container, { height: sheetHeight }, animStyle]}>
       <View style={[styles.topBar, { backgroundColor: color }]} />
       <BlurView intensity={75} tint="dark" style={styles.blur}>
 
@@ -374,9 +376,8 @@ const illus = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: TAB_BAR_HEIGHT,
+    bottom: 0,
     left: 0, right: 0,
-    height: SHEET_HEIGHT,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     overflow: 'hidden',
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
   sheetLabel: { color: 'rgba(255,255,255,0.22)', fontSize: 9, fontWeight: '700', letterSpacing: 2.5 },
 
   scroll:        { flex: 1 },
-  scrollContent: { paddingBottom: 32 },
+  scrollContent: { paddingBottom: TAB_BAR_HEIGHT + 24 },
 
   illustrationArea: { alignItems: 'center', paddingVertical: 4 },
 

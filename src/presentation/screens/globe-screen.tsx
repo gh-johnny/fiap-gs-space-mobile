@@ -4,6 +4,7 @@ import { useSharedValue, withTiming } from 'react-native-reanimated'
 import { useRouter } from 'expo-router'
 import { GlobeView } from '@/presentation/components/globe-view/globe-view'
 import { AlertCard } from '@/presentation/components/alert-card/alert-card'
+import { MiniAlertBanner } from '@/presentation/components/alert-card/mini-alert-banner'
 import { ConjunctionListSheet } from '@/presentation/screens/conjunction-list-sheet'
 import { SatelliteControlSheet } from '@/presentation/components/satellite-control/satellite-control-sheet'
 import { IGlobeGlAdapter } from '@/infrastructure/adapters/i-globe-gl-adapter'
@@ -134,11 +135,19 @@ export function GlobeScreen() {
         </View>
       </View>
 
-      {activeAlert && (
+      {activeAlert && !selectedNoradId && (
         <AlertCard
           alert={activeAlert}
           visible={!!activeAlert}
           onPress={() => router.push('/alert-detail')}
+          onAcknowledge={() => void handleAcknowledge()}
+          onDismiss={handleDismiss}
+        />
+      )}
+
+      {activeAlert && selectedNoradId && (
+        <MiniAlertBanner
+          alert={activeAlert}
           onAcknowledge={() => void handleAcknowledge()}
           onDismiss={handleDismiss}
         />
