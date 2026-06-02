@@ -112,18 +112,41 @@
     var lineGroup = new THREE.Group();
     world.scene().add(lineGroup);
 
+    // Great-circle arc at orbital altitude using SLERP — never cuts through the globe
     function makeLine(posA, posB, color, opacity, isHighlight) {
-      var vA  = polar2Cart(posA.lat, posA.lng, posA.alt);
-      var vB  = polar2Cart(posB.lat, posB.lng, posB.alt);
-      var geo = new THREE.BufferGeometry().setFromPoints([vA, vB]);
-      var mat = new THREE.LineBasicMaterial({
-        color: color,
-        transparent: true,
-        opacity: opacity,
-      });
-      var line    = new THREE.Line(geo, mat);
-      line.userData.isHighlight  = !!isHighlight;
-      line.userData.baseOpacity  = opacity;
+      var SEGMENTS = 60;
+      var ARC_LIFT = 0.03; // gentle outward bow at midpoint (fraction of globe radius)
+
+      // Unit direction vectors (surface level)
+      var uA = polar2Cart(posA.lat, posA.lng, 0).normalize();
+      var uB = polar2Cart(posB.lat, posB.lng, 0).normalize();
+
+      var dot   = Math.min(1, Math.max(-1, uA.dot(uB)));
+      var omega = Math.acos(dot);
+      var sinOm = Math.sin(omega);
+
+      var points = [];
+      for (var i = 0; i <= SEGMENTS; i++) {
+        var t   = i / SEGMENTS;
+        // Interpolate altitude linearly + small bow outward at midpoint
+        var alt = posA.alt + (posB.alt - posA.alt) * t + ARC_LIFT * Math.sin(t * Math.PI);
+        var r   = GLOBE_R * (1 + alt);
+
+        var vec;
+        if (sinOm < 1e-10) {
+          vec = uA.clone().lerp(uB, t).normalize();
+        } else {
+          vec = uA.clone().multiplyScalar(Math.sin((1 - t) * omega) / sinOm)
+                   .add(uB.clone().multiplyScalar(Math.sin(t * omega) / sinOm));
+        }
+        points.push(vec.multiplyScalar(r));
+      }
+
+      var geo  = new THREE.BufferGeometry().setFromPoints(points);
+      var mat  = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: opacity });
+      var line = new THREE.Line(geo, mat);
+      line.userData.isHighlight = !!isHighlight;
+      line.userData.baseOpacity = opacity;
       return line;
     }
 
