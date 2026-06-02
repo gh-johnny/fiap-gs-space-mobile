@@ -54,6 +54,11 @@
       .arcDashLength(d => d.dashLen)
       .arcDashGap(d => d.dashGap)
       .arcDashAnimateTime(d => d.animTime)
+      .ringsData([])
+      .ringColor('color')
+      .ringMaxRadius(2.5)
+      .ringPropagationSpeed(2)
+      .ringRepeatPeriod(1800)
       (document.getElementById('globe'));
 
     world.controls().autoRotate = true;
@@ -85,6 +90,10 @@
 
     function renderPoints() {
       world.pointsData(pointsData);
+      // Rings only on operational satellites (cyan) — give depth and "alive" feel
+      world.ringsData(pointsData.filter(function(p) {
+        return p.originalColor === '#00E5FF';
+      }));
     }
 
     // Arcs rendered independently — never restarts on position updates
@@ -144,7 +153,7 @@
           pointsData = (msg.payload || []).map(function (p) {
             return {
               lat: p.lat, lng: p.lng,
-              alt: Math.min(p.alt / 6371, 0.15),
+              alt: Math.max(0.04, Math.min(p.alt * 2, 0.38)),
               originalColor: p.color,
               color: p.color,
               radius: 0.3,
