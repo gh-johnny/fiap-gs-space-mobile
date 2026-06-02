@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router'
 import { GlobeView } from '@/presentation/components/globe-view/globe-view'
 import { AlertCard } from '@/presentation/components/alert-card/alert-card'
 import { ConjunctionListSheet } from '@/presentation/screens/conjunction-list-sheet'
+import { SatelliteControlSheet } from '@/presentation/components/satellite-control/satellite-control-sheet'
 import { IGlobeGlAdapter } from '@/infrastructure/adapters/i-globe-gl-adapter'
 import { useOrbitalStore } from '@/application/stores/use-orbital-store'
 import { useAlertStore } from '@/application/stores/use-alert-store'
@@ -19,6 +20,7 @@ export function GlobeScreen() {
   const globeRef = useRef<IGlobeGlAdapter>(null)
   const globeDim = useSharedValue(0)
   const [showSheet, setShowSheet] = useState(false)
+  const [selectedNoradId, setSelectedNoradId] = useState<string | null>(null)
   const arcsInitialized = useRef(false)
 
   const {
@@ -83,6 +85,18 @@ export function GlobeScreen() {
     screenHeight: height,
   })
 
+  function handleSatelliteTap(noradId: string) {
+    setSelectedNoradId(noradId)
+    globeRef.current?.dimGlobe(0.35)
+    globeRef.current?.selectSatellite(Number(noradId))
+  }
+
+  function handleControlSheetClose() {
+    setSelectedNoradId(null)
+    globeRef.current?.undimGlobe()
+    globeRef.current?.deselectSatellite()
+  }
+
   function handleDismiss() {
     dismissAlert()
     globeDim.value = withTiming(0, { duration: 400 })
@@ -101,7 +115,7 @@ export function GlobeScreen() {
         if (!showSheet) onTap(e.nativeEvent.pageX, e.nativeEvent.pageY)
       }}
     >
-      <GlobeView ref={globeRef} />
+      <GlobeView ref={globeRef} onSatelliteTap={handleSatelliteTap} />
 
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.listBtn} onPress={() => setShowSheet(true)}>
@@ -131,6 +145,13 @@ export function GlobeScreen() {
       )}
 
       {showSheet && <ConjunctionListSheet onClose={() => setShowSheet(false)} />}
+
+      {selectedNoradId && (
+        <SatelliteControlSheet
+          noradId={selectedNoradId}
+          onClose={handleControlSheetClose}
+        />
+      )}
     </View>
   )
 }

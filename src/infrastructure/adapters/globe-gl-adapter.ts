@@ -57,6 +57,14 @@ export class GlobeGlAdapter implements IGlobeGlAdapter {
     this.postMessage({ type: 'UNDIM_GLOBE' })
   }
 
+  selectSatellite(noradId: number): void {
+    this.postMessage({ type: 'SELECT_SATELLITE', payload: { noradId } })
+  }
+
+  deselectSatellite(): void {
+    this.postMessage({ type: 'DESELECT_SATELLITE' })
+  }
+
   private postMessage(message: unknown): void {
     this.webViewRef.current?.injectJavaScript(
       `window.handleGlobeCommand(${JSON.stringify(message)}); true;`,

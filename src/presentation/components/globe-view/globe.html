@@ -75,6 +75,8 @@
       }, 3000);
     });
 
+    var selectedNoradId = null;
+
     var pointsData = [];
     var conjunctionPairs = [];  // [{noradIdA, noradIdB, severity}]
     var backgroundArcs = [];    // built from conjunctionPairs + pointsData
@@ -106,6 +108,15 @@
         return acc;
       }, []);
     }
+
+    world.onPointClick(function(point) {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'SATELLITE_TAPPED',
+          payload: { noradId: point.label }
+        }));
+      }
+    });
 
     // Rebuild at animTime/2 — exactly when the single line reaches the other end
     setInterval(function () {
@@ -191,6 +202,25 @@
 
         case 'UNDIM_GLOBE':
           document.getElementById('overlay').style.background = 'rgba(0,0,0,0)';
+          break;
+
+        case 'SELECT_SATELLITE':
+          selectedNoradId = String(msg.payload.noradId);
+          pointsData = pointsData.map(function(p) {
+            if (String(p.label) === selectedNoradId) {
+              return Object.assign({}, p, { radius: 1.2, color: '#FFFFFF' });
+            }
+            return Object.assign({}, p, { radius: 0.15 });
+          });
+          renderPoints();
+          break;
+
+        case 'DESELECT_SATELLITE':
+          selectedNoradId = null;
+          pointsData = pointsData.map(function(p) {
+            return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
+          });
+          renderPoints();
           break;
       }
     };

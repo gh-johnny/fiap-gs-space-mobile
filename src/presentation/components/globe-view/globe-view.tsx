@@ -1,6 +1,6 @@
 import React, { useRef, forwardRef, useImperativeHandle } from 'react'
 import { StyleSheet, Image } from 'react-native'
-import WebView from 'react-native-webview'
+import WebView, { WebViewMessageEvent } from 'react-native-webview'
 import { GlobeGlAdapter } from '@/infrastructure/adapters/globe-gl-adapter'
 import { IGlobeGlAdapter } from '@/infrastructure/adapters/i-globe-gl-adapter'
 
@@ -8,11 +8,26 @@ import { IGlobeGlAdapter } from '@/infrastructure/adapters/i-globe-gl-adapter'
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const globeSource = Image.resolveAssetSource(require('./globe.html'))
 
-export const GlobeView = forwardRef<IGlobeGlAdapter>((_, ref) => {
+interface GlobeViewProps {
+  onSatelliteTap?: (noradId: string) => void
+}
+
+export const GlobeView = forwardRef<IGlobeGlAdapter, GlobeViewProps>(({ onSatelliteTap }, ref) => {
   const webViewRef = useRef<WebView>(null)
   const adapter = useRef(new GlobeGlAdapter(webViewRef))
+  const onSatelliteTapRef = useRef(onSatelliteTap)
+  onSatelliteTapRef.current = onSatelliteTap
 
   useImperativeHandle(ref, () => adapter.current)
+
+  function handleMessage(event: WebViewMessageEvent) {
+    try {
+      const msg = JSON.parse(event.nativeEvent.data)
+      if (msg.type === 'SATELLITE_TAPPED') {
+        onSatelliteTapRef.current?.(msg.payload.noradId)
+      }
+    } catch (_) {}
+  }
 
   return (
     <WebView
@@ -24,6 +39,7 @@ export const GlobeView = forwardRef<IGlobeGlAdapter>((_, ref) => {
       javaScriptEnabled
       scrollEnabled={false}
       backgroundColor="transparent"
+      onMessage={handleMessage}
     />
   )
 })

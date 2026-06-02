@@ -8,4 +8,6 @@ export interface IGlobeGlAdapter {
   clearHighlight(): void
   dimGlobe(opacity: number): void
   undimGlobe(): void
+  selectSatellite(noradId: number): void
+  deselectSatellite(): void
 }
