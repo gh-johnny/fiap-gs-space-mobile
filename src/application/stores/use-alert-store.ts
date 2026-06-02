@@ -1,8 +1,11 @@
 import { create } from 'zustand'
-import { ConjunctionEvent, OrbitalAlert } from '@/domain/entities'
+import { ConjunctionEvent, OrbitalAlert, SatelliteObject } from '@/domain/entities'
+import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach } from '@/domain/value-objects'
 import { IConjunctionRepository } from '@/domain/repositories/i-conjunction-repository'
 import { IAlertHistoryRepository } from '@/domain/repositories/i-alert-history-repository'
 import { AcknowledgeAlert } from '@/domain/usecases/acknowledge-alert'
+
+const MAX_CONJUNCTIONS = 12
 
 interface AlertState {
   conjunctions: ConjunctionEvent[]
@@ -11,8 +14,10 @@ interface AlertState {
   loadConjunctions: (repo: IConjunctionRepository) => Promise<void>
   loadAlertHistory: (repo: IAlertHistoryRepository) => Promise<void>
   triggerAlert: () => void
+  triggerAlertFor: (event: ConjunctionEvent) => void
   acknowledgeCurrentAlert: (useCase: AcknowledgeAlert) => Promise<void>
   dismissAlert: () => void
+  spawnRandomConjunction: (satellites: SatelliteObject[]) => ConjunctionEvent | null
   reset: () => void
 }
 
@@ -39,6 +44,10 @@ export const useAlertStore = create<AlertState>((set, get) => ({
     set({ activeAlert: OrbitalAlert.create(target) })
   },
 
+  triggerAlertFor(event) {
+    set({ activeAlert: OrbitalAlert.create(event) })
+  },
+
   async acknowledgeCurrentAlert(useCase) {
     const { activeAlert } = get()
     if (!activeAlert) return
@@ -48,6 +57,36 @@ export const useAlertStore = create<AlertState>((set, get) => ({
 
   dismissAlert() {
     set({ activeAlert: null })
+  },
+
+  spawnRandomConjunction(satellites) {
+    const { conjunctions } = get()
+    if (satellites.length < 2 || conjunctions.length >= MAX_CONJUNCTIONS) return null
+
+    const idxA = Math.floor(Math.random() * satellites.length)
+    let idxB = Math.floor(Math.random() * (satellites.length - 1))
+    if (idxB >= idxA) idxB++
+
+    const satA = satellites[idxA]!
+    const satB = satellites[idxB]!
+    const aId = satA.noradId.value
+    const bId = satB.noradId.value
+
+    const alreadyExists = conjunctions.some((c) => {
+      const ids = new Set([c.objectA.noradId.value, c.objectB.noradId.value])
+      return ids.has(aId) && ids.has(bId)
+    })
+    if (alreadyExists) return null
+
+    const event = ConjunctionEvent.create({
+      objectA: satA,
+      objectB: satB,
+      pc: ProbabilityOfCollision.create(5e-5),
+      missDistance: MissDistance.create(2000 + Math.random() * 12000),
+      tcpa: TimeToClosestApproach.create(new Date(Date.now() + (30 + Math.random() * 90) * 60_000)),
+    })
+    set({ conjunctions: [...conjunctions, event] })
+    return event
   },
 
   reset() {

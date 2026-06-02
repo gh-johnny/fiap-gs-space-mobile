@@ -30,6 +30,7 @@
       WARNING:  { color: '#FF9500', baseOpacity: 0.70 },
       INFO:     { color: '#FFD60A', baseOpacity: 0.52 },
     };
+    var SEVERITY_RANK = { CRITICAL: 3, WARNING: 2, INFO: 1 };
     var HIGHLIGHT_COLOR   = '#FF3B30';
     var HIGHLIGHT_OPACITY = 0.95;
 
@@ -193,11 +194,34 @@
     }, 50);
 
     // ─── state ────────────────────────────────────────────────────────────────
-    var selectedNoradId    = null;
-    var objectsData        = [];
-    var conjunctionPairs   = [];
-    var highlightedPair    = null;
+    var selectedNoradId     = null;
+    var objectsData         = [];
+    var conjunctionPairs    = [];
+    var highlightedPair     = null;
     var correctedSatellites = {}; // noradId → true, persists across position updates
+    var conjunctionColors   = {}; // noradId → arc color, persists across position updates
+    var conjunctionColorRank = {}; // noradId → severity rank, used to keep highest severity
+
+    // Sets conjunction color for a satellite pair, respecting priority (CRITICAL wins)
+    function applyConjunctionColor(sidA, sidB, severity) {
+      var style = CONJUNCTION_STYLES[severity] || CONJUNCTION_STYLES.INFO;
+      var rank  = SEVERITY_RANK[severity] || 1;
+      [sidA, sidB].forEach(function(sid) {
+        if (rank >= (conjunctionColorRank[sid] || 0)) {
+          conjunctionColors[sid]    = style.color;
+          conjunctionColorRank[sid] = rank;
+          delete correctedSatellites[sid];
+        }
+      });
+    }
+
+    // Paints objectsData entries whose noradId has an entry in conjunctionColors
+    function paintConjunctionDots() {
+      objectsData = objectsData.map(function(p) {
+        var c = conjunctionColors[String(p.label)];
+        return c ? Object.assign({}, p, { color: c, originalColor: c }) : p;
+      });
+    }
 
     // ─── render ───────────────────────────────────────────────────────────────
     function renderObjects() {
@@ -211,7 +235,8 @@
         case 'UPDATE_POSITIONS':
           objectsData = (msg.payload || []).map(function (p) {
             var sid       = String(p.noradId);
-            var baseColor = correctedSatellites[sid] ? '#34C759' : p.color;
+            var baseColor = conjunctionColors[sid]
+                          || (correctedSatellites[sid] ? '#34C759' : p.color);
             return {
               lat: p.lat, lng: p.lng,
               alt: Math.max(0.04, Math.min(p.alt * 2, 0.38)),
@@ -226,9 +251,32 @@
           break;
 
         case 'SET_CONJUNCTION_PAIRS':
-          conjunctionPairs = msg.payload || [];
+          conjunctionPairs    = msg.payload || [];
+          conjunctionColors   = {};
+          conjunctionColorRank = {};
+          conjunctionPairs.forEach(function(pair) {
+            applyConjunctionColor(String(pair.noradIdA), String(pair.noradIdB), pair.severity);
+          });
+          paintConjunctionDots();
+          renderObjects();
           rebuildLines();
           break;
+
+        case 'ADD_CONJUNCTION_PAIR': {
+          var newPair = msg.payload;
+          var alreadyHas = conjunctionPairs.some(function(p) {
+            return (p.noradIdA === newPair.noradIdA && p.noradIdB === newPair.noradIdB) ||
+                   (p.noradIdA === newPair.noradIdB && p.noradIdB === newPair.noradIdA);
+          });
+          if (!alreadyHas) {
+            conjunctionPairs = conjunctionPairs.concat([newPair]);
+            applyConjunctionColor(String(newPair.noradIdA), String(newPair.noradIdB), newPair.severity);
+            paintConjunctionDots();
+            renderObjects();
+            rebuildLines();
+          }
+          break;
+        }
 
         case 'HIGHLIGHT_CONJUNCTION': {
           var noradIdA = msg.payload.noradIdA;
@@ -283,18 +331,32 @@
 
         case 'MARK_CORRECTED': {
           var correctedId = String(msg.payload.noradId);
-          correctedSatellites[correctedId] = true;
-          // Turn dot green and persist via originalColor
-          objectsData = objectsData.map(function(p) {
-            if (String(p.label) === correctedId) {
-              return Object.assign({}, p, { color: '#34C759', originalColor: '#34C759' });
-            }
-            return p;
+
+          // Collect all partners from pairs about to be removed
+          var partners = [];
+          conjunctionPairs.forEach(function(pair) {
+            if (String(pair.noradIdA) === correctedId) partners.push(String(pair.noradIdB));
+            if (String(pair.noradIdB) === correctedId) partners.push(String(pair.noradIdA));
           });
+
+          // Turn corrected satellite + all its partners green
+          var toGreen = [correctedId].concat(partners);
+          toGreen.forEach(function(sid) {
+            correctedSatellites[sid] = true;
+            delete conjunctionColors[sid];
+            delete conjunctionColorRank[sid];
+          });
+          objectsData = objectsData.map(function(p) {
+            return toGreen.indexOf(String(p.label)) !== -1
+              ? Object.assign({}, p, { color: '#34C759', originalColor: '#34C759' })
+              : p;
+          });
+
           // Remove all conjunction pairs involving this satellite
           conjunctionPairs = conjunctionPairs.filter(function(pair) {
             return String(pair.noradIdA) !== correctedId && String(pair.noradIdB) !== correctedId;
           });
+
           // Clear highlight if it involved this satellite
           if (highlightedPair &&
               (String(highlightedPair.noradIdA) === correctedId ||

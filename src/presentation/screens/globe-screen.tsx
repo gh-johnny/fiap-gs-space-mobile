@@ -34,32 +34,28 @@ export function GlobeScreen() {
   } = useContainer()
 
   const { positions, loadSatellites, propagatePositions } = useOrbitalStore()
-  const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlert, acknowledgeCurrentAlert, dismissAlert } = useAlertStore()
+  const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlertFor, acknowledgeCurrentAlert, dismissAlert } = useAlertStore()
   const { simpleMode, toggleSimpleMode } = useUIStore()
 
   function handleTrigger() {
-    void hapticsGateway.warn()
-    triggerAlert()
-    globeDim.value = withTiming(0.5, { duration: 400 })
-    globeRef.current?.dimGlobe(0.5)
-
-    const { conjunctions: current } = useAlertStore.getState()
-    const target = current.find((c) => c.severity === 'CRITICAL') ?? current[0]
-    if (target) globeRef.current?.highlightConjunction(target)
+    const { satellites } = useOrbitalStore.getState()
+    const newEvent = useAlertStore.getState().spawnRandomConjunction(satellites)
+    if (!newEvent) return
+    globeRef.current?.addConjunctionPair(newEvent)
+    const { activeAlert: current } = useAlertStore.getState()
+    if (!current) {
+      triggerAlertFor(newEvent)
+      void hapticsGateway.warn()
+      globeDim.value = withTiming(0.5, { duration: 400 })
+      globeRef.current?.dimGlobe(0.5)
+      globeRef.current?.highlightConjunction(newEvent)
+    }
   }
 
   useEffect(() => {
     void loadSatellites(satelliteRepository)
     void loadConjunctions(conjunctionRepository)
     void loadAlertHistory(alertHistoryRepository)
-  }, [])
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const { activeAlert: current } = useAlertStore.getState()
-      if (!current) handleTrigger()
-    }, 8000)
-    return () => clearTimeout(t)
   }, [])
 
   useOrbitalLoop(
@@ -74,6 +70,22 @@ export function GlobeScreen() {
         if (freshConjunctions.length > 0) {
           globeRef.current?.showConjunctionPairs(freshConjunctions)
           arcsInitialized.current = true
+        }
+      }
+
+      if (arcsInitialized.current && Math.random() < 0.10) {
+        const { satellites } = useOrbitalStore.getState()
+        const newEvent = useAlertStore.getState().spawnRandomConjunction(satellites)
+        if (newEvent) {
+          globeRef.current?.addConjunctionPair(newEvent)
+          const { activeAlert: current } = useAlertStore.getState()
+          if (!current) {
+            triggerAlertFor(newEvent)
+            void hapticsGateway.warn()
+            globeDim.value = withTiming(0.5, { duration: 400 })
+            globeRef.current?.dimGlobe(0.5)
+            globeRef.current?.highlightConjunction(newEvent)
+          }
         }
       }
     },
@@ -101,6 +113,7 @@ export function GlobeScreen() {
   function handleOrbitalCorrection() {
     if (!selectedNoradId) return
     globeRef.current?.markCorrected(Number(selectedNoradId))
+    dismissAlert()
   }
 
   function handleDismiss() {
@@ -111,7 +124,14 @@ export function GlobeScreen() {
   }
 
   async function handleAcknowledge() {
+    const { activeAlert: alert } = useAlertStore.getState()
     await acknowledgeCurrentAlert(acknowledgeAlert)
+    if (alert) {
+      const noradId = String(alert.conjunctionEvent.objectA.noradId.value)
+      setSelectedNoradId(noradId)
+      globeRef.current?.dimGlobe(0.35)
+      globeRef.current?.selectSatellite(Number(noradId))
+    }
   }
 
   return (

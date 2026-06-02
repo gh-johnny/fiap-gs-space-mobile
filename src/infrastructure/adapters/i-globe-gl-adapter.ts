@@ -11,4 +11,5 @@ export interface IGlobeGlAdapter {
   selectSatellite(noradId: number): void
   deselectSatellite(): void
   markCorrected(noradId: number): void
+  addConjunctionPair(event: ConjunctionEvent): void
 }

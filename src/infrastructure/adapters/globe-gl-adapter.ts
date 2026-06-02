@@ -69,6 +69,17 @@ export class GlobeGlAdapter implements IGlobeGlAdapter {
     this.postMessage({ type: 'MARK_CORRECTED', payload: { noradId } })
   }
 
+  addConjunctionPair(event: ConjunctionEvent): void {
+    this.postMessage({
+      type: 'ADD_CONJUNCTION_PAIR',
+      payload: {
+        noradIdA: event.objectA.noradId.value,
+        noradIdB: event.objectB.noradId.value,
+        severity: event.severity,
+      },
+    })
+  }
+
   private postMessage(message: unknown): void {
     this.webViewRef.current?.injectJavaScript(
       `window.handleGlobeCommand(${JSON.stringify(message)}); true;`,
