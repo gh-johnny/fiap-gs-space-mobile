@@ -1,6 +1,6 @@
 import { SatelliteJsAdapter } from '@/infrastructure/adapters/satellite-js-adapter'
 import { MockTleGateway } from '@/infrastructure/gateways/mock-tle-gateway'
-import { MmkvStorageGateway } from '@/infrastructure/gateways/mmkv-storage-gateway'
+import { SqliteKvStorageGateway } from '@/infrastructure/gateways/sqlite-kv-storage-gateway'
 import { ExpoHapticsGateway } from '@/infrastructure/gateways/expo-haptics-gateway'
 import { MockSatelliteRepository } from '@/infrastructure/repositories/mock-satellite-repository'
 import { MockConjunctionRepository } from '@/infrastructure/repositories/mock-conjunction-repository'
@@ -14,14 +14,14 @@ import { AcknowledgeAlert } from '@/domain/usecases/acknowledge-alert'
 // Adapters
 const satelliteJsAdapter = new SatelliteJsAdapter()
 
-// Gateways
-const tleGateway = new MockTleGateway()
-const storageGateway = new MmkvStorageGateway()
-const hapticsGateway = new ExpoHapticsGateway()
-
-// Services
+// Services (must initialize before gateways that depend on it)
 const sqliteService = new SqliteService()
 sqliteService.initialize()
+
+// Gateways
+const tleGateway = new MockTleGateway()
+const storageGateway = new SqliteKvStorageGateway(sqliteService)
+const hapticsGateway = new ExpoHapticsGateway()
 
 // Repositories
 const satelliteRepository = new MockSatelliteRepository(tleGateway)

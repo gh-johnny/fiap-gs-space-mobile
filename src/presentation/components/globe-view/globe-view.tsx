@@ -1,11 +1,12 @@
 import React, { useRef, forwardRef, useImperativeHandle } from 'react'
-import { StyleSheet } from 'react-native'
+import { StyleSheet, Image } from 'react-native'
 import WebView from 'react-native-webview'
 import { GlobeGlAdapter } from '@/infrastructure/adapters/globe-gl-adapter'
 import { IGlobeGlAdapter } from '@/infrastructure/adapters/i-globe-gl-adapter'
 
+// Image.resolveAssetSource converts the Metro asset descriptor into an actual { uri } object
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const globeHtml = require('./globe.html') as { uri: string } | string
+const globeSource = Image.resolveAssetSource(require('./globe.html'))
 
 export const GlobeView = forwardRef<IGlobeGlAdapter>((_, ref) => {
   const webViewRef = useRef<WebView>(null)
@@ -16,7 +17,7 @@ export const GlobeView = forwardRef<IGlobeGlAdapter>((_, ref) => {
   return (
     <WebView
       ref={webViewRef}
-      source={typeof globeHtml === 'string' ? { uri: globeHtml } : { uri: globeHtml.uri }}
+      source={{ uri: globeSource.uri }}
       style={StyleSheet.absoluteFill}
       originWhitelist={['*']}
       allowFileAccess

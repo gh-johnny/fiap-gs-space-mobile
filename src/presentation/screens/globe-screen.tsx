@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { StyleSheet, View, useWindowDimensions } from 'react-native'
 import { useSharedValue, withTiming } from 'react-native-reanimated'
 import { GlobeView } from '@/presentation/components/globe-view/globe-view'
@@ -24,7 +24,8 @@ export function GlobeScreen() {
     hapticsGateway,
   } = useContainer()
 
-  const { satellites, positions, loadSatellites, propagatePositions } = useOrbitalStore()
+  const { positions, loadSatellites, propagatePositions } = useOrbitalStore()
+
   const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlert, acknowledgeCurrentAlert, dismissAlert } = useAlertStore()
 
   useEffect(() => {
@@ -87,5 +88,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#000814',
   },
 })
-
-void satellites
