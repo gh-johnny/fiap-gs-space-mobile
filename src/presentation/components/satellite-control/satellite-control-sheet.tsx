@@ -17,6 +17,7 @@ import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 interface Props {
   noradId: string
   onClose: () => void
+  onCorrected?: () => void
 }
 
 const CLOSE_THRESHOLD = 100
@@ -159,7 +160,7 @@ const PHASES = [
   'Δv +0.3 m/s APLICADO',
 ] as const
 
-function OrbitalCorrectionButton({ color }: { color: string }) {
+function OrbitalCorrectionButton({ color, onComplete }: { color: string; onComplete?: () => void }) {
   const [phase, setPhase] = useState(-1)
   const pulseOp = useSharedValue(0)
 
@@ -172,6 +173,7 @@ function OrbitalCorrectionButton({ color }: { color: string }) {
       cancelAnimation(pulseOp)
       pulseOp.value = withTiming(0, { duration: 200 })
       setPhase(2)
+      onComplete?.()
     }, 2900)
     setTimeout(() => setPhase(-1), 5500)
   }
@@ -203,7 +205,7 @@ function OrbitalCorrectionButton({ color }: { color: string }) {
 
 // ─── main sheet ────────────────────────────────────────────────────────────────
 
-export function SatelliteControlSheet({ noradId, onClose }: Props) {
+export function SatelliteControlSheet({ noradId, onClose, onCorrected }: Props) {
   const { height: screenHeight } = useWindowDimensions()
   const sheetHeight = Math.round(screenHeight * 0.80)
 
@@ -334,7 +336,7 @@ export function SatelliteControlSheet({ noradId, onClose }: Props) {
 
           {/* Orbital correction CTA */}
           <View style={[styles.section, { marginBottom: 8 }]}>
-            <OrbitalCorrectionButton color={color} />
+            <OrbitalCorrectionButton color={color} onComplete={onCorrected} />
           </View>
 
         </ScrollView>

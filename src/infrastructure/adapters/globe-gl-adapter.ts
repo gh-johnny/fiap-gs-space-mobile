@@ -65,6 +65,10 @@ export class GlobeGlAdapter implements IGlobeGlAdapter {
     this.postMessage({ type: 'DESELECT_SATELLITE' })
   }
 
+  markCorrected(noradId: number): void {
+    this.postMessage({ type: 'MARK_CORRECTED', payload: { noradId } })
+  }
+
   private postMessage(message: unknown): void {
     this.webViewRef.current?.injectJavaScript(
       `window.handleGlobeCommand(${JSON.stringify(message)}); true;`,

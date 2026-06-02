@@ -193,10 +193,11 @@
     }, 50);
 
     // ─── state ────────────────────────────────────────────────────────────────
-    var selectedNoradId  = null;
-    var objectsData      = [];
-    var conjunctionPairs = [];
-    var highlightedPair  = null;
+    var selectedNoradId    = null;
+    var objectsData        = [];
+    var conjunctionPairs   = [];
+    var highlightedPair    = null;
+    var correctedSatellites = {}; // noradId → true, persists across position updates
 
     // ─── render ───────────────────────────────────────────────────────────────
     function renderObjects() {
@@ -209,13 +210,15 @@
 
         case 'UPDATE_POSITIONS':
           objectsData = (msg.payload || []).map(function (p) {
+            var sid       = String(p.noradId);
+            var baseColor = correctedSatellites[sid] ? '#34C759' : p.color;
             return {
               lat: p.lat, lng: p.lng,
               alt: Math.max(0.04, Math.min(p.alt * 2, 0.38)),
-              originalColor: p.color,
-              color: p.color,
+              originalColor: baseColor,
+              color: baseColor,
               radius: 0.3,
-              label: String(p.noradId),
+              label: sid,
             };
           });
           renderObjects();
@@ -277,6 +280,31 @@
           });
           renderObjects();
           break;
+
+        case 'MARK_CORRECTED': {
+          var correctedId = String(msg.payload.noradId);
+          correctedSatellites[correctedId] = true;
+          // Turn dot green and persist via originalColor
+          objectsData = objectsData.map(function(p) {
+            if (String(p.label) === correctedId) {
+              return Object.assign({}, p, { color: '#34C759', originalColor: '#34C759' });
+            }
+            return p;
+          });
+          // Remove all conjunction pairs involving this satellite
+          conjunctionPairs = conjunctionPairs.filter(function(pair) {
+            return String(pair.noradIdA) !== correctedId && String(pair.noradIdB) !== correctedId;
+          });
+          // Clear highlight if it involved this satellite
+          if (highlightedPair &&
+              (String(highlightedPair.noradIdA) === correctedId ||
+               String(highlightedPair.noradIdB) === correctedId)) {
+            highlightedPair = null;
+          }
+          renderObjects();
+          rebuildLines();
+          break;
+        }
       }
     };
 

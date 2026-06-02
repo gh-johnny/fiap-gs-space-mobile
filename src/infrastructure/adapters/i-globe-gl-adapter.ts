@@ -10,4 +10,5 @@ export interface IGlobeGlAdapter {
   undimGlobe(): void
   selectSatellite(noradId: number): void
   deselectSatellite(): void
+  markCorrected(noradId: number): void
 }

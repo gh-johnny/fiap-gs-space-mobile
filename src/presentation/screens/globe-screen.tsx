@@ -98,6 +98,11 @@ export function GlobeScreen() {
     globeRef.current?.deselectSatellite()
   }
 
+  function handleOrbitalCorrection() {
+    if (!selectedNoradId) return
+    globeRef.current?.markCorrected(Number(selectedNoradId))
+  }
+
   function handleDismiss() {
     dismissAlert()
     globeDim.value = withTiming(0, { duration: 400 })
@@ -159,6 +164,7 @@ export function GlobeScreen() {
         <SatelliteControlSheet
           noradId={selectedNoradId}
           onClose={handleControlSheetClose}
+          onCorrected={handleOrbitalCorrection}
         />
       )}
     </View>
