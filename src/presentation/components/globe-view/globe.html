@@ -405,7 +405,8 @@
           // Keep orbit ring in sync with the selected satellite's moving position
           if (selectedNoradId && velocityAngles[selectedNoradId] !== undefined) {
             var orbitData = objectsData.find(function(p) { return String(p.label) === selectedNoradId; });
-            if (orbitData) drawOrbit(orbitData.lat, orbitData.lng, orbitData.alt, velocityAngles[selectedNoradId], orbitData.color);
+            if (orbitData) drawOrbit(orbitData.lat, orbitData.lng, orbitData.alt,
+              velocityAngles[selectedNoradId] + (correctionAngles[selectedNoradId] || 0), orbitData.color);
           }
           break;
         }
@@ -491,7 +492,8 @@
           var fSid  = String(msg.payload.noradId);
           var fData = objectsData.find(function(p) { return String(p.label) === fSid; });
           if (fData && velocityAngles[fSid] !== undefined) {
-            drawOrbit(msg.payload.lat, msg.payload.lng, fData.alt, velocityAngles[fSid], fData.color);
+            drawOrbit(msg.payload.lat, msg.payload.lng, fData.alt,
+              velocityAngles[fSid] + (correctionAngles[fSid] || 0), fData.color);
           }
           break;
         }
