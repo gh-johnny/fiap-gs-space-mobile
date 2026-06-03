@@ -12,4 +12,6 @@ export interface IGlobeGlAdapter {
   deselectSatellite(): void
   markCorrected(noradId: number): void
   addConjunctionPair(event: ConjunctionEvent): void
+  setGlobeTexture(mode: 'light' | 'dark'): void
+  focusSatellite(lat: number, lng: number): void
 }

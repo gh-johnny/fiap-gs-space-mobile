@@ -80,6 +80,14 @@ export class GlobeGlAdapter implements IGlobeGlAdapter {
     })
   }
 
+  setGlobeTexture(mode: 'light' | 'dark'): void {
+    this.postMessage({ type: 'SET_GLOBE_TEXTURE', payload: { mode } })
+  }
+
+  focusSatellite(lat: number, lng: number): void {
+    this.postMessage({ type: 'FOCUS_SATELLITE', payload: { lat, lng } })
+  }
+
   private postMessage(message: unknown): void {
     this.webViewRef.current?.injectJavaScript(
       `window.handleGlobeCommand(${JSON.stringify(message)}); true;`,

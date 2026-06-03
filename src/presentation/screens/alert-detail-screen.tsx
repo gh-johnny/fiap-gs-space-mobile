@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native'
-import { ModeToggle } from '@/presentation/components/mode-toggle/mode-toggle'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAlertStore } from '@/application/stores/use-alert-store'
@@ -28,7 +27,7 @@ export function AlertDetailScreen() {
   const insets = useSafeAreaInsets()
   const { activeAlert, acknowledgeCurrentAlert } = useAlertStore()
   const { acknowledgeAlert } = useContainer()
-  const { simpleMode, toggleSimpleMode } = useUIStore()
+  const { simpleMode } = useUIStore()
 
   useEffect(() => {
     if (activeAlert && activeAlert.status === 'detected') {
@@ -51,14 +50,9 @@ export function AlertDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* Header row: badge + mode toggle */}
-        <View style={styles.headerRow}>
-          <View style={[styles.badge, { backgroundColor: color + '22', borderColor: color + '55' }]}>
-            <View style={[styles.badgeDot, { backgroundColor: color }]} />
-            <Text style={[styles.badgeText, { color }]}>{SEVERITY_LABELS[event.severity]}</Text>
-          </View>
-
-          <ModeToggle simpleMode={simpleMode} onToggle={toggleSimpleMode} />
+        <View style={[styles.badge, { backgroundColor: color + '22', borderColor: color + '55' }]}>
+          <View style={[styles.badgeDot, { backgroundColor: color }]} />
+          <Text style={[styles.badgeText, { color }]}>{SEVERITY_LABELS[event.severity]}</Text>
         </View>
 
         {/* Hero: the two objects */}
@@ -138,11 +132,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000814' },
   content: { paddingHorizontal: 22, gap: 22 },
 
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',

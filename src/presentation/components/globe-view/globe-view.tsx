@@ -10,9 +10,10 @@ const globeSource = Image.resolveAssetSource(require('./globe.html'))
 
 interface GlobeViewProps {
   onSatelliteTap?: (noradId: string) => void
+  onReady?: () => void
 }
 
-export const GlobeView = forwardRef<IGlobeGlAdapter, GlobeViewProps>(({ onSatelliteTap }, ref) => {
+export const GlobeView = forwardRef<IGlobeGlAdapter, GlobeViewProps>(({ onSatelliteTap, onReady }, ref) => {
   const webViewRef = useRef<WebView>(null)
   const adapter = useRef(new GlobeGlAdapter(webViewRef))
   const onSatelliteTapRef = useRef(onSatelliteTap)
@@ -40,6 +41,7 @@ export const GlobeView = forwardRef<IGlobeGlAdapter, GlobeViewProps>(({ onSatell
       scrollEnabled={false}
       backgroundColor="transparent"
       onMessage={handleMessage}
+      onLoad={onReady}
     />
   )
 })

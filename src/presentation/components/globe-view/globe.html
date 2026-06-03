@@ -342,6 +342,22 @@
           renderObjects();
           break;
 
+        case 'FOCUS_SATELLITE': {
+          world.pointOfView({ lat: msg.payload.lat, lng: msg.payload.lng, altitude: 1.8 }, 1200);
+          break;
+        }
+
+        case 'SET_GLOBE_TEXTURE': {
+          var textureMode = msg.payload.mode;
+          var textureUrl = textureMode === 'light'
+            ? 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
+            : 'https://unpkg.com/three-globe/example/img/earth-night.jpg';
+          var atmoColor = textureMode === 'light' ? '#3a9be0' : '#1a6ecd';
+          world.globeImageUrl(textureUrl);
+          world.atmosphereColor(atmoColor);
+          break;
+        }
+
         case 'MARK_CORRECTED': {
           var correctedId = String(msg.payload.noradId);
           correctedSatellites[correctedId] = true;

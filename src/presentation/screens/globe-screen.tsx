@@ -13,7 +13,6 @@ import { useAlertStore } from '@/application/stores/use-alert-store'
 import { SEVERITY_COLORS } from '@/constants/theme'
 import { useUIStore } from '@/application/stores/use-ui-store'
 import { useOrbitalLoop } from '@/presentation/hooks/use-orbital-loop'
-import { ModeToggle } from '@/presentation/components/mode-toggle/mode-toggle'
 import { useHiddenTrigger } from '@/presentation/hooks/use-hidden-trigger'
 import { useContainer } from '@/application/container/container-context'
 
@@ -38,7 +37,15 @@ export function GlobeScreen() {
 
   const { positions, loadSatellites, propagatePositions } = useOrbitalStore()
   const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlertFor, acknowledgeCurrentAlert, dismissAlert, incrementCorrected } = useAlertStore()
-  const { simpleMode, toggleSimpleMode } = useUIStore()
+  const { globeMode } = useUIStore()
+
+  useEffect(() => {
+    globeRef.current?.setGlobeTexture(globeMode)
+  }, [globeMode])
+
+  function handleGlobeReady() {
+    globeRef.current?.setGlobeTexture(globeMode)
+  }
 
   function handleTrigger() {
     const { satellites } = useOrbitalStore.getState()
@@ -105,6 +112,8 @@ export function GlobeScreen() {
     setSelectedNoradId(noradId)
     globeRef.current?.dimGlobe(0.35)
     globeRef.current?.selectSatellite(Number(noradId))
+    const pos = useOrbitalStore.getState().positions.find(p => p.noradId.value === Number(noradId))
+    if (pos) globeRef.current?.focusSatellite(pos.lat, pos.lng)
   }
 
   function handleControlSheetClose() {
@@ -157,6 +166,8 @@ export function GlobeScreen() {
       setSelectedNoradId(noradId)
       globeRef.current?.dimGlobe(0.35)
       globeRef.current?.selectSatellite(Number(noradId))
+      const pos = useOrbitalStore.getState().positions.find(p => p.noradId.value === Number(noradId))
+      if (pos) globeRef.current?.focusSatellite(pos.lat, pos.lng)
     }
   }
 
@@ -167,14 +178,12 @@ export function GlobeScreen() {
         if (!showSheet) onTap(e.nativeEvent.pageX, e.nativeEvent.pageY)
       }}
     >
-      <GlobeView ref={globeRef} onSatelliteTap={handleSatelliteTap} />
+      <GlobeView ref={globeRef} onSatelliteTap={handleSatelliteTap} onReady={handleGlobeReady} />
 
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.listBtn} onPress={() => setShowSheet(true)}>
           <Text style={styles.listBtnText}>≡  CONJUNÇÕES</Text>
         </TouchableOpacity>
-
-        <ModeToggle simpleMode={simpleMode} onToggle={toggleSimpleMode} />
 
         <View style={styles.statusPill}>
           <View style={styles.statusDot} />

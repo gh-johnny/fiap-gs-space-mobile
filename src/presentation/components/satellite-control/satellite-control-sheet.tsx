@@ -213,7 +213,7 @@ export function SatelliteControlSheet({ noradId, onClose, onCorrected, accentCol
   const translateY = useSharedValue(sheetHeight)
 
   useEffect(() => {
-    translateY.value = withSpring(0, { damping: 22, stiffness: 190 })
+    translateY.value = withSpring(0, { damping: 32, stiffness: 260 })
   }, [])
 
   const satellite = useOrbitalStore(s => s.satellites.find(sat => sat.noradId.value === Number(noradId)) ?? null)
@@ -226,7 +226,7 @@ export function SatelliteControlSheet({ noradId, onClose, onCorrected, accentCol
         translateY.value = withSpring(sheetHeight, { damping: 20 })
         runOnJS(onClose)()
       } else {
-        translateY.value = withSpring(0, { damping: 22, stiffness: 190 })
+        translateY.value = withSpring(0, { damping: 32, stiffness: 260 })
       }
     })
 
