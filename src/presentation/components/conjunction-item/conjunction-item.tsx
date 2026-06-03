@@ -2,6 +2,7 @@ import React from 'react'
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native'
 import { ConjunctionEvent } from '@/domain/entities'
 import { SEVERITY_COLORS } from '@/constants/theme'
+import { useTranslation } from '@/i18n/use-translation'
 
 interface ConjunctionItemProps {
   event: ConjunctionEvent
@@ -13,6 +14,7 @@ interface ConjunctionItemProps {
 export function ConjunctionItem({ event, isCorrected = false, onCorrect, onRemove }: ConjunctionItemProps) {
   const color = isCorrected ? '#34C759' : SEVERITY_COLORS[event.severity]
   const hasActions = onCorrect !== undefined || onRemove !== undefined
+  const t = useTranslation()
 
   return (
     <View style={[styles.container, isCorrected && styles.containerCorrected]}>
@@ -24,7 +26,7 @@ export function ConjunctionItem({ event, isCorrected = false, onCorrect, onRemov
               {event.objectA.name} — {event.objectB.name}
             </Text>
             {isCorrected && (
-              <Text style={[styles.correctedBadge, { color }]}>✓ CORRIGIDO</Text>
+              <Text style={[styles.correctedBadge, { color }]}>{t('conjunction.correctedBadge')}</Text>
             )}
           </View>
           <View style={styles.detailRow}>
@@ -42,12 +44,12 @@ export function ConjunctionItem({ event, isCorrected = false, onCorrect, onRemov
                 style={[styles.correctBtn, { borderColor: color + '55', backgroundColor: color + '12' }]}
                 onPress={onCorrect}
               >
-                <Text style={[styles.correctBtnText, { color }]}>CORRIGIR ›</Text>
+                <Text style={[styles.correctBtnText, { color }]}>{t('conjunction.correct')}</Text>
               </TouchableOpacity>
             )}
             {isCorrected && onRemove && (
               <TouchableOpacity style={styles.removeBtn} onPress={onRemove}>
-                <Text style={styles.removeBtnText}>REMOVER</Text>
+                <Text style={styles.removeBtnText}>{t('conjunction.remove')}</Text>
               </TouchableOpacity>
             )}
           </View>

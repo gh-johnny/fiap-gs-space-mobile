@@ -7,28 +7,29 @@ import { useAlertStore } from '@/application/stores/use-alert-store'
 import { useUIStore } from '@/application/stores/use-ui-store'
 import { useContainer } from '@/application/container/container-context'
 import { formatPc, formatMissDistance, formatTcpa, formatWindow } from '@/presentation/utils/format-simple'
+import { useTranslation } from '@/i18n/use-translation'
 import type { Severity } from '@/domain/value-objects'
 import { SEVERITY_COLORS } from '@/constants/theme'
-
-
-const SEVERITY_LABELS: Record<Severity, string> = {
-  CRITICAL: 'CRÍTICO',
-  WARNING: 'ALERTA',
-  INFO: 'INFO',
-}
-
-const RECOMMENDATIONS: Record<Severity, string> = {
-  CRITICAL: 'Ação imediata necessária — risco de colisão iminente',
-  WARNING: 'Monitorar de perto — janela de manobra disponível',
-  INFO: 'Situação sob controle — continuar monitoramento',
-}
 
 export function AlertDetailScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { activeAlert, acknowledgeCurrentAlert } = useAlertStore()
   const { acknowledgeAlert } = useContainer()
-  const { simpleMode } = useUIStore()
+  const { simpleMode, locale } = useUIStore()
+  const t = useTranslation()
+
+  const SEVERITY_LABELS: Record<Severity, string> = {
+    CRITICAL: t('severity.critical'),
+    WARNING: t('severity.warning'),
+    INFO: t('severity.info'),
+  }
+
+  const RECOMMENDATIONS: Record<Severity, string> = {
+    CRITICAL: t('rec.critical'),
+    WARNING: t('rec.warning'),
+    INFO: t('rec.info'),
+  }
 
   useEffect(() => {
     if (activeAlert && activeAlert.status === 'detected') {
@@ -56,7 +57,6 @@ export function AlertDetailScreen() {
           <Text style={[styles.badgeText, { color }]}>{SEVERITY_LABELS[event.severity]}</Text>
         </View>
 
-        {/* Hero: the two objects */}
         <View style={styles.hero}>
           <View style={styles.objectBlock}>
             <Text style={styles.objectName} numberOfLines={2}>{event.objectA.name}</Text>
@@ -71,48 +71,44 @@ export function AlertDetailScreen() {
           </View>
         </View>
 
-        {/* 2×2 metric grid */}
         <View style={styles.grid}>
           <MetricCard
-            label={simpleMode ? 'Probabilidade' : 'Pc'}
-            value={formatPc(event.pc, simpleMode)}
+            label={simpleMode ? t('alert.probability') : t('alert.pc')}
+            value={formatPc(event.pc, simpleMode, locale)}
             color={color}
           />
           <MetricCard
-            label={simpleMode ? 'Distância' : 'Miss Distance'}
-            value={formatMissDistance(event.missDistance, simpleMode)}
+            label={simpleMode ? t('alert.distance') : t('alert.missDistance')}
+            value={formatMissDistance(event.missDistance, simpleMode, locale)}
             color={color}
           />
           <MetricCard
-            label={simpleMode ? 'Quando' : 'TCPA'}
-            value={formatTcpa(event.tcpa, simpleMode)}
+            label={simpleMode ? t('alert.when') : t('alert.tcpa')}
+            value={formatTcpa(event.tcpa, simpleMode, locale)}
             color={color}
           />
           <MetricCard
-            label={simpleMode ? 'Horário' : 'Janela UTC'}
-            value={formatWindow(event.tcpa, simpleMode)}
+            label={simpleMode ? t('alert.time') : t('alert.window')}
+            value={formatWindow(event.tcpa, simpleMode, locale)}
             color={color}
           />
         </View>
 
-        {/* Recommendation */}
         <View style={[styles.recommendation, { borderLeftColor: color }]}>
           <Text style={styles.recommendationText}>{RECOMMENDATIONS[event.severity]}</Text>
         </View>
 
-        {/* Status */}
         <Text style={styles.status}>
-          Status:{' '}
+          {t('alert.status')}:{' '}
           <Text style={{ color, fontWeight: '700' }}>{activeAlert.status.toUpperCase()}</Text>
         </Text>
 
-        {/* Close button */}
         <TouchableOpacity
           style={[styles.closeBtn, { borderColor: color + '88' }]}
           onPress={() => router.back()}
           activeOpacity={0.8}
         >
-          <Text style={[styles.closeBtnText, { color }]}>FECHAR</Text>
+          <Text style={[styles.closeBtnText, { color }]}>{t('alert.close')}</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -145,7 +141,6 @@ const styles = StyleSheet.create({
   },
   badgeDot: { width: 7, height: 7, borderRadius: 4 },
   badgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-
 
   hero: { alignItems: 'center', gap: 10, paddingVertical: 4 },
   objectBlock: { alignItems: 'center', gap: 4 },

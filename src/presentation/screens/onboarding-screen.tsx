@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native'
 import { useContainer } from '@/application/container/container-context'
+import { useTranslation } from '@/i18n/use-translation'
 
 const ONBOARDING_KEY = 'onboarding_complete'
 
@@ -10,6 +11,7 @@ interface OnboardingScreenProps {
 
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const { storageGateway } = useContainer()
+  const t = useTranslation()
 
   function handleConfirm() {
     storageGateway.set(ONBOARDING_KEY, true)
@@ -20,19 +22,17 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
     <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.emoji}>🛸</Text>
-        <Text style={styles.title}>Orbital Guardian</Text>
-        <Text style={styles.subtitle}>
-          Monitoramento em tempo real de satélites e detritos orbitais
-        </Text>
+        <Text style={styles.title}>{t('onboarding.title')}</Text>
+        <Text style={styles.subtitle}>{t('onboarding.subtitle')}</Text>
 
         <View style={styles.bullets}>
-          <Bullet text="Visualize objetos em órbita no globo 3D" />
-          <Bullet text="Detecte conjunções e riscos de colisão" />
-          <Bullet text="Acesse o histórico completo de alertas" />
+          <Bullet text={t('onboarding.bullet1')} />
+          <Bullet text={t('onboarding.bullet2')} />
+          <Bullet text={t('onboarding.bullet3')} />
         </View>
 
         <TouchableOpacity style={styles.btn} onPress={handleConfirm}>
-          <Text style={styles.btnText}>COMEÇAR MONITORAMENTO</Text>
+          <Text style={styles.btnText}>{t('onboarding.start')}</Text>
         </TouchableOpacity>
       </View>
     </View>

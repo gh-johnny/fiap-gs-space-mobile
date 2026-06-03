@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { StyleSheet, View, Text, TouchableOpacity, Pressable } from 'react-native'
 import { useUIStore } from '@/application/stores/use-ui-store'
+import { useTranslation } from '@/i18n/use-translation'
 
 const ICON_COLOR = 'rgba(255,255,255,0.7)'
 
@@ -25,7 +26,8 @@ const icon = StyleSheet.create({
 
 export function SettingsOverlay() {
   const [open, setOpen] = useState(false)
-  const { simpleMode, toggleSimpleMode, globeMode, setGlobeMode } = useUIStore()
+  const { simpleMode, toggleSimpleMode, globeMode, setGlobeMode, locale, toggleLocale } = useUIStore()
+  const t = useTranslation()
 
   return (
     <>
@@ -43,17 +45,17 @@ export function SettingsOverlay() {
 
       {open && (
         <View style={styles.popup}>
-          <Text style={styles.popupTitle}>CONFIGURAÇÕES</Text>
+          <Text style={styles.popupTitle}>{t('settings.title')}</Text>
 
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Globo</Text>
+            <Text style={styles.rowLabel}>{t('settings.globe')}</Text>
             <View style={styles.group}>
               <TouchableOpacity
                 style={[styles.opt, globeMode === 'light' && styles.optActive]}
                 onPress={() => setGlobeMode('light')}
               >
                 <Text style={[styles.optText, globeMode === 'light' && styles.optTextActive]}>
-                  {'☀ DIA'}
+                  {t('settings.day')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -61,7 +63,7 @@ export function SettingsOverlay() {
                 onPress={() => setGlobeMode('dark')}
               >
                 <Text style={[styles.optText, globeMode === 'dark' && styles.optTextActive]}>
-                  {'☾ NOITE'}
+                  {t('settings.night')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -70,19 +72,47 @@ export function SettingsOverlay() {
           <View style={styles.divider} />
 
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Exibição</Text>
+            <Text style={styles.rowLabel}>{t('settings.display')}</Text>
             <View style={styles.group}>
               <TouchableOpacity
                 style={[styles.opt, !simpleMode && styles.optActive]}
                 onPress={() => { if (simpleMode) toggleSimpleMode() }}
               >
-                <Text style={[styles.optText, !simpleMode && styles.optTextActive]}>TÉC</Text>
+                <Text style={[styles.optText, !simpleMode && styles.optTextActive]}>
+                  {t('settings.technical')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.opt, simpleMode && styles.optActive]}
                 onPress={() => { if (!simpleMode) toggleSimpleMode() }}
               >
-                <Text style={[styles.optText, simpleMode && styles.optTextActive]}>SIM</Text>
+                <Text style={[styles.optText, simpleMode && styles.optTextActive]}>
+                  {t('settings.simple')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>{t('settings.language')}</Text>
+            <View style={styles.group}>
+              <TouchableOpacity
+                style={[styles.opt, locale === 'pt' && styles.optActive]}
+                onPress={() => { if (locale !== 'pt') toggleLocale() }}
+              >
+                <Text style={[styles.optText, locale === 'pt' && styles.optTextActive]}>
+                  🇧🇷 PT
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.opt, locale === 'en' && styles.optActive]}
+                onPress={() => { if (locale !== 'en') toggleLocale() }}
+              >
+                <Text style={[styles.optText, locale === 'en' && styles.optTextActive]}>
+                  🇬🇧 EN
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

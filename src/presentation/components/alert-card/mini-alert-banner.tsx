@@ -3,6 +3,7 @@ import { BlurView } from 'expo-blur'
 import { useRouter } from 'expo-router'
 import { OrbitalAlert } from '@/domain/entities'
 import { SEVERITY_COLORS } from '@/constants/theme'
+import { useTranslation } from '@/i18n/use-translation'
 
 interface Props {
   alert: OrbitalAlert
@@ -14,6 +15,7 @@ export function MiniAlertBanner({ alert, onAcknowledge, onDismiss }: Props) {
   const router = useRouter()
   const ev    = alert.conjunctionEvent
   const color = SEVERITY_COLORS[ev.severity]
+  const t     = useTranslation()
 
   return (
     <View style={styles.wrap}>
@@ -26,7 +28,7 @@ export function MiniAlertBanner({ alert, onAcknowledge, onDismiss }: Props) {
         </Text>
       </View>
       <TouchableOpacity style={styles.btn} onPress={() => router.push('/alert-detail')}>
-        <Text style={styles.btnTxt}>DETALHES</Text>
+        <Text style={styles.btnTxt}>{t('alert.details')}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.btn} onPress={onAcknowledge}>
         <Text style={[styles.btnTxt, { color: '#34C759' }]}>✓</Text>

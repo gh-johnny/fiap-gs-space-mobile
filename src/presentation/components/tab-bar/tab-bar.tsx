@@ -1,6 +1,7 @@
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native'
 import { BlurView } from 'expo-blur'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useTranslation } from '@/i18n/use-translation'
 
 export type AppTab = 'globe' | 'intel'
 
@@ -9,15 +10,16 @@ interface TabBarProps {
   onChange: (tab: AppTab) => void
 }
 
-const TABS: { id: AppTab; icon: string; label: string }[] = [
-  { id: 'globe', icon: '◉', label: 'GLOBO' },
-  { id: 'intel', icon: '⊞', label: 'INTEL' },
-]
-
 export const TAB_BAR_HEIGHT = 84
 
 export function TabBar({ active, onChange }: TabBarProps) {
   const insets = useSafeAreaInsets()
+  const t = useTranslation()
+
+  const TABS: { id: AppTab; icon: string; label: string }[] = [
+    { id: 'globe', icon: '◉', label: t('tab.globe') },
+    { id: 'intel', icon: '⊞', label: t('tab.intel') },
+  ]
 
   return (
     <View style={[styles.wrapper, { bottom: Math.max(insets.bottom, 12) + 14 }]}>

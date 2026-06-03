@@ -6,6 +6,7 @@ import { BlurView } from 'expo-blur'
 import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 import { ConjunctionItem } from '@/presentation/components/conjunction-item/conjunction-item'
 import { useAlertStore } from '@/application/stores/use-alert-store'
+import { useTranslation } from '@/i18n/use-translation'
 import type { ConjunctionEvent } from '@/domain/entities'
 
 interface Props {
@@ -28,6 +29,7 @@ function isCorrectedConjunction(c: ConjunctionEvent, correctedNoradIds: Set<stri
 export function ConjunctionListSheet({ onClose, onOpenControlSheet, correctedNoradIds }: Props) {
   const translateY = useSharedValue(0)
   const { conjunctions, removeConjunction } = useAlertStore()
+  const t = useTranslation()
 
   const active = conjunctions
     .filter((c) => !isCorrectedConjunction(c, correctedNoradIds))
@@ -59,7 +61,7 @@ export function ConjunctionListSheet({ onClose, onOpenControlSheet, correctedNor
         <GestureDetector gesture={pan}>
           <View style={styles.handleArea}>
             <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>CONJUNÇÕES ATIVAS</Text>
+            <Text style={styles.sheetTitle}>{t('conjunction.title')}</Text>
             <Text style={styles.sheetCount}>{conjunctions.length}</Text>
           </View>
         </GestureDetector>
@@ -69,11 +71,10 @@ export function ConjunctionListSheet({ onClose, onOpenControlSheet, correctedNor
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Active conjunctions */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ATIVAS — {active.length}</Text>
+            <Text style={styles.sectionTitle}>{t('conjunction.active')} — {active.length}</Text>
             {active.length === 0
-              ? <Text style={styles.empty}>Nenhuma conjunção ativa</Text>
+              ? <Text style={styles.empty}>{t('conjunction.none')}</Text>
               : active.map((c, i) => (
                 <ConjunctionItem
                   key={i}
@@ -85,10 +86,9 @@ export function ConjunctionListSheet({ onClose, onOpenControlSheet, correctedNor
             }
           </View>
 
-          {/* Corrected conjunctions — only shown when there are some */}
           {corrected.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>CORRIGIDAS — {corrected.length}</Text>
+              <Text style={styles.sectionTitle}>{t('conjunction.corrected')} — {corrected.length}</Text>
               {corrected.map((c, i) => (
                 <ConjunctionItem
                   key={i}

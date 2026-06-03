@@ -7,11 +7,13 @@ import { useAlertStore } from '@/application/stores/use-alert-store'
 import { useOrbitalStore } from '@/application/stores/use-orbital-store'
 import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 import { SEVERITY_COLORS } from '@/constants/theme'
+import { useTranslation } from '@/i18n/use-translation'
 
 export function DashboardScreen() {
   const insets = useSafeAreaInsets()
   const { conjunctions, activeAlert, correctedCount } = useAlertStore()
   const { positions } = useOrbitalStore()
+  const t = useTranslation()
 
   const criticals = conjunctions.filter((c) => c.severity === 'CRITICAL')
   const warnings = conjunctions.filter((c) => c.severity === 'WARNING')
@@ -19,14 +21,13 @@ export function DashboardScreen() {
 
   const riskIndex = Math.min(100, criticals.length * 20 + warnings.length * 8 + infos.length * 2)
   const riskColor = riskIndex >= 71 ? '#FF3B30' : riskIndex >= 41 ? '#FF9500' : '#34C759'
-  const riskLabel = riskIndex >= 71 ? 'ALTO' : riskIndex >= 41 ? 'MODERADO' : 'BAIXO'
+  const riskLabel = riskIndex >= 71 ? t('dashboard.riskHigh') : riskIndex >= 41 ? t('dashboard.riskMedium') : t('dashboard.riskLow')
 
   const leo = positions.filter((p) => p.alt < 2000).length
   const meo = positions.filter((p) => p.alt >= 2000 && p.alt < 35786).length
   const geo = positions.filter((p) => p.alt >= 35786).length
   const total = positions.length || 1
 
-  // Animated risk bar
   const riskWidth = useSharedValue(0)
   useEffect(() => {
     riskWidth.value = withTiming(riskIndex, { duration: 1400, easing: Easing.out(Easing.cubic) })
@@ -47,15 +48,14 @@ export function DashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>ORBITAL INTEL</Text>
-        <Text style={styles.subtitle}>Space Situational Awareness</Text>
+        <Text style={styles.title}>{t('dashboard.title')}</Text>
+        <Text style={styles.subtitle}>{t('dashboard.subtitle')}</Text>
 
-        {/* Active alert banner */}
         {activeAlert && (
           <BlurView intensity={40} tint="dark" style={[styles.card, styles.alertBanner]}>
             <View style={[styles.alertBannerDot, { backgroundColor: SEVERITY_COLORS[activeAlert.conjunctionEvent.severity] }]} />
             <View style={styles.alertBannerBody}>
-              <Text style={styles.alertBannerLabel}>ALERTA ATIVO</Text>
+              <Text style={styles.alertBannerLabel}>{t('dashboard.activeAlert')}</Text>
               <Text style={styles.alertBannerObjects} numberOfLines={1}>
                 {activeAlert.conjunctionEvent.objectA.name} × {activeAlert.conjunctionEvent.objectB.name}
               </Text>
@@ -66,10 +66,9 @@ export function DashboardScreen() {
           </BlurView>
         )}
 
-        {/* Row: Risk Index + Objects */}
         <View style={styles.row}>
           <BlurView intensity={40} tint="dark" style={[styles.card, styles.cardFlex]}>
-            <Text style={styles.cardLabel}>ÍNDICE DE RISCO</Text>
+            <Text style={styles.cardLabel}>{t('dashboard.riskIndex')}</Text>
             <Text style={[styles.riskValue, { color: riskColor }]}>{riskIndex}</Text>
             <Text style={[styles.riskLabel, { color: riskColor }]}>{riskLabel}</Text>
             <View style={styles.riskTrack}>
@@ -79,20 +78,19 @@ export function DashboardScreen() {
           </BlurView>
 
           <BlurView intensity={40} tint="dark" style={[styles.card, styles.cardFlex]}>
-            <Text style={styles.cardLabel}>RASTREADOS</Text>
+            <Text style={styles.cardLabel}>{t('dashboard.tracked')}</Text>
             <Text style={styles.bigNumber}>{positions.length || '—'}</Text>
-            <Text style={styles.cardSub}>objetos em órbita</Text>
+            <Text style={styles.cardSub}>{t('dashboard.orbitalObjects')}</Text>
             <View style={styles.spacer} />
-            <Text style={styles.cardLabel}>CORRIGIDAS</Text>
+            <Text style={styles.cardLabel}>{t('dashboard.corrected')}</Text>
             <Text style={[styles.medNumber, correctedCount > 0 && { color: '#34C759' }]}>
               {correctedCount}
             </Text>
           </BlurView>
         </View>
 
-        {/* Conjunctions */}
         <BlurView intensity={40} tint="dark" style={styles.card}>
-          <Text style={styles.cardLabel}>CONJUNÇÕES DETECTADAS</Text>
+          <Text style={styles.cardLabel}>{t('dashboard.conjunctions')}</Text>
           <View style={styles.severityList}>
             <SeverityRow color={SEVERITY_COLORS.CRITICAL} label="CRITICAL" count={criticals.length} />
             <SeverityRow color={SEVERITY_COLORS.WARNING} label="WARNING" count={warnings.length} />
@@ -100,11 +98,10 @@ export function DashboardScreen() {
           </View>
         </BlurView>
 
-        {/* Upcoming events */}
         <BlurView intensity={40} tint="dark" style={styles.card}>
-          <Text style={styles.cardLabel}>PRÓXIMOS EVENTOS</Text>
+          <Text style={styles.cardLabel}>{t('dashboard.upcoming')}</Text>
           {upcoming.length === 0
-            ? <Text style={styles.empty}>Sem eventos carregados — abra o Globo primeiro</Text>
+            ? <Text style={styles.empty}>{t('dashboard.noEvents')}</Text>
             : upcoming.map((c, i) => (
               <View key={i} style={styles.eventRow}>
                 <View style={[styles.eventDot, { backgroundColor: SEVERITY_COLORS[c.severity] }]} />
@@ -122,14 +119,13 @@ export function DashboardScreen() {
           }
         </BlurView>
 
-        {/* Orbital zones */}
         <BlurView intensity={40} tint="dark" style={styles.card}>
-          <Text style={styles.cardLabel}>ZONAS ORBITAIS</Text>
+          <Text style={styles.cardLabel}>{t('dashboard.zones')}</Text>
           <ZoneBar label="LEO" subtitle="200–2 000 km" count={leo} total={total} color="#00E5FF" />
           <ZoneBar label="MEO" subtitle="2 000–35 786 km" count={meo} total={total} color="#5AC8FA" />
           <ZoneBar label="GEO" subtitle="≥ 35 786 km" count={geo} total={total} color="#64D2FF" />
           {positions.length === 0 && (
-            <Text style={styles.empty}>Abra o Globo para carregar as zonas</Text>
+            <Text style={styles.empty}>{t('dashboard.openGlobe')}</Text>
           )}
         </BlurView>
       </ScrollView>

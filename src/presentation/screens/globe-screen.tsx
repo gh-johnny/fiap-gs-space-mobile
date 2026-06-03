@@ -16,10 +16,12 @@ import { useOrbitalLoop } from '@/presentation/hooks/use-orbital-loop'
 import { useHiddenTrigger } from '@/presentation/hooks/use-hidden-trigger'
 import { SettingsOverlay } from '@/presentation/components/settings-overlay/settings-overlay'
 import { useContainer } from '@/application/container/container-context'
+import { useTranslation } from '@/i18n/use-translation'
 
 export function GlobeScreen() {
   const router = useRouter()
   const { width, height } = useWindowDimensions()
+  const t = useTranslation()
   const globeRef = useRef<IGlobeGlAdapter>(null)
   const globeDim = useSharedValue(0)
   const [showSheet, setShowSheet] = useState(false)
@@ -183,12 +185,12 @@ export function GlobeScreen() {
 
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.listBtn} onPress={() => setShowSheet(true)}>
-          <Text style={styles.listBtnText}>≡  CONJUNÇÕES</Text>
+          <Text style={styles.listBtnText}>≡  {t('globe.conjunctions')}</Text>
         </TouchableOpacity>
 
         <View style={styles.statusPill}>
           <View style={styles.statusDot} />
-          <Text style={styles.statusText}>MONITOR</Text>
+          <Text style={styles.statusText}>{t('globe.monitor')}</Text>
         </View>
       </View>
 

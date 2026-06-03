@@ -8,6 +8,7 @@ import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 import { useUIStore } from '@/application/stores/use-ui-store'
 import { formatPc, formatMissDistance, formatTcpa, formatWindow } from '@/presentation/utils/format-simple'
 import { SEVERITY_COLORS } from '@/constants/theme'
+import { useTranslation } from '@/i18n/use-translation'
 
 interface AlertCardProps {
   alert: OrbitalAlert
@@ -17,22 +18,23 @@ interface AlertCardProps {
   visible: boolean
 }
 
-const SEVERITY_LABELS: Record<Severity, string> = {
-  CRITICAL: 'CRÍTICO',
-  WARNING: 'ALERTA',
-  INFO: 'INFO',
-}
-
-const RECOMMENDATIONS: Record<Severity, string> = {
-  CRITICAL: 'Ação imediata necessária — risco de colisão iminente',
-  WARNING: 'Monitorar de perto — janela de manobra disponível',
-  INFO: 'Situação sob controle — continuar monitoramento',
-}
-
 export function AlertCard({ alert, onPress, onAcknowledge, onDismiss, visible }: AlertCardProps) {
   const { conjunctionEvent: event } = alert
   const severity = event.severity
-  const { simpleMode } = useUIStore()
+  const { simpleMode, locale } = useUIStore()
+  const t = useTranslation()
+
+  const SEVERITY_LABELS: Record<Severity, string> = {
+    CRITICAL: t('severity.critical'),
+    WARNING: t('severity.warning'),
+    INFO: t('severity.info'),
+  }
+
+  const RECOMMENDATIONS: Record<Severity, string> = {
+    CRITICAL: t('rec.critical'),
+    WARNING: t('rec.warning'),
+    INFO: t('rec.info'),
+  }
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: withSpring(visible ? 0 : 300, { damping: 20, stiffness: 200 }) }],
@@ -51,7 +53,7 @@ export function AlertCard({ alert, onPress, onAcknowledge, onDismiss, visible }:
                 {SEVERITY_LABELS[severity]}
               </Text>
               <View style={styles.headerRight}>
-                <Text style={styles.detailHint}>VER DETALHES ›</Text>
+                <Text style={styles.detailHint}>{t('alert.viewDetails')}</Text>
                 <TouchableOpacity onPress={onDismiss} hitSlop={12}>
                   <Text style={styles.closeBtn}>✕</Text>
                 </TouchableOpacity>
@@ -64,20 +66,20 @@ export function AlertCard({ alert, onPress, onAcknowledge, onDismiss, visible }:
 
             <View style={styles.metrics}>
               <MetricRow
-                label={simpleMode ? 'Prob.' : 'Pc'}
-                value={formatPc(event.pc, simpleMode)}
+                label={simpleMode ? t('alert.probability') : t('alert.pc')}
+                value={formatPc(event.pc, simpleMode, locale)}
               />
               <MetricRow
-                label={simpleMode ? 'Separação' : 'Distância'}
-                value={formatMissDistance(event.missDistance, simpleMode)}
+                label={simpleMode ? t('alert.distance') : t('alert.missDistance')}
+                value={formatMissDistance(event.missDistance, simpleMode, locale)}
               />
               <MetricRow
-                label={simpleMode ? 'Quando' : 'TCPA'}
-                value={formatTcpa(event.tcpa, simpleMode)}
+                label={simpleMode ? t('alert.when') : t('alert.tcpa')}
+                value={formatTcpa(event.tcpa, simpleMode, locale)}
               />
               <MetricRow
-                label={simpleMode ? 'Horário' : 'Janela'}
-                value={formatWindow(event.tcpa, simpleMode)}
+                label={simpleMode ? t('alert.time') : t('alert.window')}
+                value={formatWindow(event.tcpa, simpleMode, locale)}
               />
             </View>
 
@@ -88,7 +90,7 @@ export function AlertCard({ alert, onPress, onAcknowledge, onDismiss, visible }:
               onPress={onAcknowledge}
             >
               <Text style={[styles.ackBtnText, { color: SEVERITY_COLORS[severity] }]}>
-                RECONHECER
+                {t('alert.acknowledge')}
               </Text>
             </TouchableOpacity>
           </View>

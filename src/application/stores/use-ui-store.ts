@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { Locale } from '@/i18n/translations'
 
 function defaultGlobeMode(): 'light' | 'dark' {
   const hour = new Date().getHours()
@@ -10,6 +11,8 @@ interface UIState {
   toggleSimpleMode: () => void
   globeMode: 'light' | 'dark'
   setGlobeMode: (mode: 'light' | 'dark') => void
+  locale: Locale
+  toggleLocale: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -17,4 +20,6 @@ export const useUIStore = create<UIState>((set) => ({
   toggleSimpleMode: () => set((s) => ({ simpleMode: !s.simpleMode })),
   globeMode: defaultGlobeMode(),
   setGlobeMode: (mode) => set({ globeMode: mode }),
+  locale: 'pt',
+  toggleLocale: () => set((s) => ({ locale: s.locale === 'pt' ? 'en' : 'pt' })),
 }))

@@ -53,19 +53,57 @@
       var px         = Math.round(d.radius * 20);
       var glow       = Math.round(px * 2);
       var isSelected = String(d.label) === selectedNoradId;
+      var sid        = String(d.label);
       var shadow     = 'box-shadow:0 0 ' + glow + 'px ' + d.color + 'aa'
                      + (isSelected ? ',0 0 ' + (glow * 1.8) + 'px #ffffff55' : '');
-      var el   = document.createElement('div');
-      el.style.cssText = [
+
+      // Wrapper — globe.gl positions this element; children are the dot + arrow
+      var wrap = document.createElement('div');
+      wrap.style.cssText = [
+        'position:relative',
+        'width:'  + (px + 20) + 'px',
+        'height:' + (px + 20) + 'px',
+        'transform:translate(-50%,-50%)',
+        'cursor:pointer',
+        'pointer-events:all',
+      ].join(';');
+
+      // Dot circle
+      var dot = document.createElement('div');
+      dot.style.cssText = [
+        'position:absolute',
+        'top:50%',
+        'left:50%',
         'width:'            + px + 'px',
         'height:'           + px + 'px',
         'border-radius:50%',
         'background-color:' + d.color,
         shadow,
         'transform:translate(-50%,-50%)',
-        'cursor:pointer',
-        'pointer-events:all',
+        'pointer-events:none',
       ].join(';');
+      wrap.appendChild(dot);
+
+      // Directional arrow — only for non-selected, normal-radius satellites with known velocity
+      if (!isSelected && d.radius < 1 && velocityAngles[sid] !== undefined) {
+        var heading   = velocityAngles[sid] + (correctionAngles[sid] || 0);
+        var arrowDist = Math.round(px / 2) + 5;
+        var arrow = document.createElement('div');
+        arrow.style.cssText = [
+          'position:absolute',
+          'top:50%',
+          'left:50%',
+          'width:4px',
+          'height:5px',
+          'clip-path:polygon(50% 0%,0% 100%,100% 100%)',
+          'background:rgba(255,255,255,0.5)',
+          // translate to center → rotate to heading → move forward by arrowDist
+          'transform:translate(-50%,-50%) rotate(' + heading + 'deg) translateY(-' + arrowDist + 'px)',
+          'pointer-events:none',
+        ].join(';');
+        wrap.appendChild(arrow);
+      }
+
       function fire(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -76,9 +114,9 @@
           }));
         }
       }
-      el.addEventListener('click',    fire);
-      el.addEventListener('touchend', fire);
-      return el;
+      wrap.addEventListener('click',    fire);
+      wrap.addEventListener('touchend', fire);
+      return wrap;
     }
 
     // ─── globe setup ──────────────────────────────────────────────────────────
@@ -203,6 +241,10 @@
     var conjunctionPairs    = []; // all pairs ever added; never removed on correction
     var highlightedPair     = null;
     var correctedSatellites = {}; // noradId → true when satellite is manually corrected
+    var prevPositions    = {};   // noradId → {lat, lng} — previous tick
+    var velocityAngles   = {};   // noradId → bearing degrees (0=N, 90=E, 180=S, 270=W)
+    var correctionAngles = {};   // noradId → ±offset degrees assigned on MARK_CORRECTED
+    var correctionDrift  = {};   // noradId → {dlat, dlng} static positional nudge
 
     // ─── satellite tracking ───────────────────────────────────────────────────
     var trackedNoradId   = null;
@@ -274,13 +316,31 @@
     window.handleGlobeCommand = function (msg) {
       switch (msg.type) {
 
-        case 'UPDATE_POSITIONS':
+        case 'UPDATE_POSITIONS': {
+          // Compute velocity bearing from position delta between ticks
+          var newPrev = {};
+          (msg.payload || []).forEach(function (p) {
+            var sid = String(p.noradId);
+            if (prevPositions[sid]) {
+              var dlat = p.lat - prevPositions[sid].lat;
+              var dlng = p.lng - prevPositions[sid].lng;
+              if (Math.abs(dlat) > 1e-6 || Math.abs(dlng) > 1e-6) {
+                // atan2(dlng, dlat): 0=N, 90=E, matches CSS rotate degrees
+                velocityAngles[sid] = Math.atan2(dlng, dlat) * 180 / Math.PI;
+              }
+            }
+            newPrev[sid] = { lat: p.lat, lng: p.lng };
+          });
+          prevPositions = newPrev;
+
           objectsData = (msg.payload || []).map(function (p) {
             var sid       = String(p.noradId);
             var baseColor = getActiveColor(sid) || p.color;
             var isSel     = sid === selectedNoradId;
+            var drift     = correctionDrift[sid];
             return {
-              lat: p.lat, lng: p.lng,
+              lat: p.lat + (drift ? drift.dlat : 0),
+              lng: p.lng + (drift ? drift.dlng : 0),
               alt: Math.max(0.04, Math.min(p.alt * 2, 0.38)),
               originalColor: baseColor,
               color:  isSel ? '#FFFFFF' : baseColor,
@@ -290,12 +350,12 @@
           });
           renderObjects();
           if (conjunctionPairs.length > 0) rebuildLines();
-          // Keep trackedPosition in sync with latest satellite data
           if (trackedNoradId) {
             var tracked = objectsData.find(function (p) { return String(p.label) === trackedNoradId; });
             if (tracked) trackedPosition = { lat: tracked.lat, lng: tracked.lng };
           }
           break;
+        }
 
         case 'SET_CONJUNCTION_PAIRS':
           conjunctionPairs    = msg.payload || [];
@@ -392,6 +452,19 @@
           var correctedId = String(msg.payload.noradId);
           correctedSatellites[correctedId] = true;
 
+          // Random direction correction ±10-20°
+          var cSign = Math.random() < 0.5 ? 1 : -1;
+          var cDeg  = cSign * (10 + Math.random() * 10);
+          correctionAngles[correctedId] = cDeg;
+
+          // Static positional drift: nudge the dot ~0.18° in the corrected heading
+          var cBase = (velocityAngles[correctedId] || 0) + cDeg;
+          var cRad  = cBase * Math.PI / 180;
+          correctionDrift[correctedId] = {
+            dlat: Math.cos(cRad) * 0.18,
+            dlng: Math.sin(cRad) * 0.18,
+          };
+
           // Clear highlight if it involved this satellite
           if (highlightedPair &&
               (String(highlightedPair.noradIdA) === correctedId ||
@@ -399,7 +472,6 @@
             highlightedPair = null;
           }
 
-          // Recompute all dot colors — partners may now have all their pairs resolved
           refreshDotColors();
           renderObjects();
           rebuildLines();
