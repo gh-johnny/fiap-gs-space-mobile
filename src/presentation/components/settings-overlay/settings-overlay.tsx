@@ -19,18 +19,8 @@ function SlidersIcon() {
 }
 
 const icon = StyleSheet.create({
-  track: {
-    height: 1.5,
-    backgroundColor: ICON_COLOR,
-    borderRadius: 1,
-  },
-  knob: {
-    position: 'absolute',
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: ICON_COLOR,
-  },
+  track: { height: 1.5, backgroundColor: ICON_COLOR, borderRadius: 1 },
+  knob: { position: 'absolute', width: 5, height: 5, borderRadius: 2.5, backgroundColor: ICON_COLOR },
 })
 
 export function SettingsOverlay() {
@@ -38,9 +28,9 @@ export function SettingsOverlay() {
   const { simpleMode, toggleSimpleMode, globeMode, setGlobeMode } = useUIStore()
 
   return (
-    <View style={styles.root} pointerEvents="box-none">
+    <>
       {open && (
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
       )}
 
       <TouchableOpacity
@@ -98,14 +88,16 @@ export function SettingsOverlay() {
           </View>
         </View>
       )}
-    </View>
+    </>
   )
 }
 
 const styles = StyleSheet.create({
-  root: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 9999,
+  backdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    zIndex: 9998,
+    elevation: 49,
   },
   btn: {
     position: 'absolute',
@@ -116,9 +108,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: 'rgba(0,8,20,0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 9999,
+    elevation: 50,
   },
   popup: {
     position: 'absolute',
@@ -131,6 +125,8 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 14,
     minWidth: 215,
+    zIndex: 9999,
+    elevation: 50,
   },
   popupTitle: {
     color: 'rgba(255,255,255,0.3)',
@@ -162,18 +158,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  optActive: {
-    backgroundColor: '#1C3D70',
-  },
+  optActive: { backgroundColor: '#1C3D70' },
   optText: {
     fontSize: 11,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.32)',
     letterSpacing: 0.8,
   },
-  optTextActive: {
-    color: '#D6EAFF',
-  },
+  optTextActive: { color: '#D6EAFF' },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,255,255,0.08)',

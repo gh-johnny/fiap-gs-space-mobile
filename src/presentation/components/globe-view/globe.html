@@ -340,10 +340,14 @@
             return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
           });
           renderObjects();
+          clearTimeout(resumeTimer);
+          resumeTimer = setTimeout(function () { world.controls().autoRotate = true; }, 1500);
           break;
 
         case 'FOCUS_SATELLITE': {
-          world.pointOfView({ lat: msg.payload.lat, lng: msg.payload.lng, altitude: 1.8 }, 1200);
+          world.controls().autoRotate = false;
+          clearTimeout(resumeTimer);
+          world.pointOfView({ lat: msg.payload.lat, lng: msg.payload.lng, altitude: 1.2 }, 1200);
           break;
         }
 
