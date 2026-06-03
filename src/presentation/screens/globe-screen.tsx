@@ -14,6 +14,7 @@ import { SEVERITY_COLORS } from '@/constants/theme'
 import { useUIStore } from '@/application/stores/use-ui-store'
 import { useOrbitalLoop } from '@/presentation/hooks/use-orbital-loop'
 import { useHiddenTrigger } from '@/presentation/hooks/use-hidden-trigger'
+import { SettingsOverlay } from '@/presentation/components/settings-overlay/settings-overlay'
 import { useContainer } from '@/application/container/container-context'
 
 export function GlobeScreen() {
@@ -229,6 +230,8 @@ export function GlobeScreen() {
           onCorrected={handleOrbitalCorrection}
         />
       )}
+
+      <SettingsOverlay />
     </View>
   )
 }

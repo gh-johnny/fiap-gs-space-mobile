@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { StyleSheet, View, Text, TouchableOpacity, Pressable, Modal } from 'react-native'
+import { StyleSheet, View, Text, TouchableOpacity, Pressable } from 'react-native'
 import { useUIStore } from '@/application/stores/use-ui-store'
+
+const ICON_COLOR = 'rgba(255,255,255,0.7)'
 
 function SlidersIcon() {
   const knobPositions = [3, 9, 5]
@@ -19,7 +21,7 @@ function SlidersIcon() {
 const icon = StyleSheet.create({
   track: {
     height: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: ICON_COLOR,
     borderRadius: 1,
   },
   knob: {
@@ -27,7 +29,7 @@ const icon = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: ICON_COLOR,
   },
 })
 
@@ -36,81 +38,74 @@ export function SettingsOverlay() {
   const { simpleMode, toggleSimpleMode, globeMode, setGlobeMode } = useUIStore()
 
   return (
-    <Modal
-      transparent
-      visible
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={() => { if (open) setOpen(false) }}
-    >
-      <View style={styles.root} pointerEvents="box-none">
-        {open && (
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
-        )}
+    <View style={styles.root} pointerEvents="box-none">
+      {open && (
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+      )}
 
-        <TouchableOpacity
-          style={styles.btn}
-          onPress={() => setOpen((o) => !o)}
-          activeOpacity={0.75}
-        >
-          <SlidersIcon />
-        </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.btn}
+        onPress={() => setOpen((o) => !o)}
+        activeOpacity={0.75}
+      >
+        <SlidersIcon />
+      </TouchableOpacity>
 
-        {open && (
-          <View style={styles.popup}>
-            <Text style={styles.popupTitle}>CONFIGURAÇÕES</Text>
+      {open && (
+        <View style={styles.popup}>
+          <Text style={styles.popupTitle}>CONFIGURAÇÕES</Text>
 
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Globo</Text>
-              <View style={styles.group}>
-                <TouchableOpacity
-                  style={[styles.opt, globeMode === 'light' && styles.optActive]}
-                  onPress={() => setGlobeMode('light')}
-                >
-                  <Text style={[styles.optText, globeMode === 'light' && styles.optTextActive]}>
-                    {'☀ DIA'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.opt, globeMode === 'dark' && styles.optActive]}
-                  onPress={() => setGlobeMode('dark')}
-                >
-                  <Text style={[styles.optText, globeMode === 'dark' && styles.optTextActive]}>
-                    {'☾ NOITE'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Exibição</Text>
-              <View style={styles.group}>
-                <TouchableOpacity
-                  style={[styles.opt, !simpleMode && styles.optActive]}
-                  onPress={() => { if (simpleMode) toggleSimpleMode() }}
-                >
-                  <Text style={[styles.optText, !simpleMode && styles.optTextActive]}>TÉC</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.opt, simpleMode && styles.optActive]}
-                  onPress={() => { if (!simpleMode) toggleSimpleMode() }}
-                >
-                  <Text style={[styles.optText, simpleMode && styles.optTextActive]}>SIM</Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Globo</Text>
+            <View style={styles.group}>
+              <TouchableOpacity
+                style={[styles.opt, globeMode === 'light' && styles.optActive]}
+                onPress={() => setGlobeMode('light')}
+              >
+                <Text style={[styles.optText, globeMode === 'light' && styles.optTextActive]}>
+                  {'☀ DIA'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.opt, globeMode === 'dark' && styles.optActive]}
+                onPress={() => setGlobeMode('dark')}
+              >
+                <Text style={[styles.optText, globeMode === 'dark' && styles.optTextActive]}>
+                  {'☾ NOITE'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-        )}
-      </View>
-    </Modal>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Exibição</Text>
+            <View style={styles.group}>
+              <TouchableOpacity
+                style={[styles.opt, !simpleMode && styles.optActive]}
+                onPress={() => { if (simpleMode) toggleSimpleMode() }}
+              >
+                <Text style={[styles.optText, !simpleMode && styles.optTextActive]}>TÉC</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.opt, simpleMode && styles.optActive]}
+                onPress={() => { if (!simpleMode) toggleSimpleMode() }}
+              >
+                <Text style={[styles.optText, simpleMode && styles.optTextActive]}>SIM</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
   },
   btn: {
     position: 'absolute',

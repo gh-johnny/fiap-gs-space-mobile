@@ -1,7 +1,6 @@
 import { Stack } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { ContainerProvider } from '@/application/container/container-context'
-import { SettingsOverlay } from '@/presentation/components/settings-overlay/settings-overlay'
 
 export default function RootLayout() {
   return (
@@ -14,7 +13,6 @@ export default function RootLayout() {
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
         </Stack>
-        <SettingsOverlay />
       </ContainerProvider>
     </GestureHandlerRootView>
   )

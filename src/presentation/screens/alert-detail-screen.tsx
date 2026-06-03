@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native'
 import { useRouter } from 'expo-router'
+import { SettingsOverlay } from '@/presentation/components/settings-overlay/settings-overlay'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAlertStore } from '@/application/stores/use-alert-store'
 import { useUIStore } from '@/application/stores/use-ui-store'
@@ -115,6 +116,7 @@ export function AlertDetailScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+      <SettingsOverlay />
     </View>
   )
 }
