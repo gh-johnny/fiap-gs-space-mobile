@@ -13,6 +13,7 @@ import { useAlertStore } from '@/application/stores/use-alert-store'
 import { SEVERITY_COLORS } from '@/constants/theme'
 import { useUIStore } from '@/application/stores/use-ui-store'
 import { useOrbitalLoop } from '@/presentation/hooks/use-orbital-loop'
+import { ModeToggle } from '@/presentation/components/mode-toggle/mode-toggle'
 import { useHiddenTrigger } from '@/presentation/hooks/use-hidden-trigger'
 import { useContainer } from '@/application/container/container-context'
 
@@ -173,11 +174,7 @@ export function GlobeScreen() {
           <Text style={styles.listBtnText}>≡  CONJUNÇÕES</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.modeBtn} onPress={toggleSimpleMode}>
-          <Text style={[styles.modeSegment, !simpleMode && styles.modeSegmentActive]}>TÉC</Text>
-          <Text style={styles.modeSep}> · </Text>
-          <Text style={[styles.modeSegment, simpleMode && styles.modeSegmentActive]}>SIM</Text>
-        </TouchableOpacity>
+        <ModeToggle simpleMode={simpleMode} onToggle={toggleSimpleMode} />
 
         <View style={styles.statusPill}>
           <View style={styles.statusDot} />
@@ -255,24 +252,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1,
   },
-  modeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,8,20,0.6)',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  modeSegment: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: 'rgba(255,255,255,0.25)',
-  },
-  modeSegmentActive: { color: '#fff' },
-  modeSep: { color: 'rgba(255,255,255,0.2)', fontSize: 10 },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',

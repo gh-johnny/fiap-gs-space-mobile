@@ -114,7 +114,7 @@ export function ConjunctionListSheet({ onClose, onOpenControlSheet, correctedNor
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: TAB_BAR_HEIGHT,
+    bottom: 0,
     left: 0,
     right: 0,
     height: SHEET_HEIGHT,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 32 },
+  scrollContent: { paddingBottom: TAB_BAR_HEIGHT + 32 },
   section: { paddingHorizontal: 16, paddingTop: 16, gap: 0 },
   sectionTitle: {
     color: 'rgba(255,255,255,0.3)',

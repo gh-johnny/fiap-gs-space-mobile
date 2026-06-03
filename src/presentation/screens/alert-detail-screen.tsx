@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native'
+import { ModeToggle } from '@/presentation/components/mode-toggle/mode-toggle'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAlertStore } from '@/application/stores/use-alert-store'
@@ -8,6 +9,7 @@ import { useContainer } from '@/application/container/container-context'
 import { formatPc, formatMissDistance, formatTcpa, formatWindow } from '@/presentation/utils/format-simple'
 import type { Severity } from '@/domain/value-objects'
 import { SEVERITY_COLORS } from '@/constants/theme'
+
 
 const SEVERITY_LABELS: Record<Severity, string> = {
   CRITICAL: 'CRÍTICO',
@@ -56,11 +58,7 @@ export function AlertDetailScreen() {
             <Text style={[styles.badgeText, { color }]}>{SEVERITY_LABELS[event.severity]}</Text>
           </View>
 
-          <TouchableOpacity style={styles.modeToggle} onPress={toggleSimpleMode}>
-            <Text style={[styles.modeSegment, !simpleMode && styles.modeSegmentActive]}>TÉC</Text>
-            <Text style={styles.modeSep}> · </Text>
-            <Text style={[styles.modeSegment, simpleMode && styles.modeSegmentActive]}>SIM</Text>
-          </TouchableOpacity>
+          <ModeToggle simpleMode={simpleMode} onToggle={toggleSimpleMode} />
         </View>
 
         {/* Hero: the two objects */}
@@ -157,19 +155,6 @@ const styles = StyleSheet.create({
   badgeDot: { width: 7, height: 7, borderRadius: 4 },
   badgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
 
-  modeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  modeSegment: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: 'rgba(255,255,255,0.25)' },
-  modeSegmentActive: { color: '#fff' },
-  modeSep: { color: 'rgba(255,255,255,0.2)', fontSize: 10 },
 
   hero: { alignItems: 'center', gap: 10, paddingVertical: 4 },
   objectBlock: { alignItems: 'center', gap: 4 },
