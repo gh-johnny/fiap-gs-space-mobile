@@ -20,6 +20,7 @@ interface Props {
   noradId: string
   onClose: () => void
   onCorrected?: () => void
+  onReady?: () => void
   accentColor?: string
 }
 
@@ -197,7 +198,7 @@ function SystemPanel({ icon, title, onValue, offValue, defaultOn = true, color }
 
 // ─── main sheet ────────────────────────────────────────────────────────────────
 
-export function SatelliteControlSheet({ noradId, onClose, onCorrected, accentColor }: Props) {
+export function SatelliteControlSheet({ noradId, onClose, onCorrected, onReady, accentColor }: Props) {
   const { height: screenHeight } = useWindowDimensions()
   const sheetHeight = Math.round(screenHeight * 0.80)
   const t = useTranslation()
@@ -205,7 +206,9 @@ export function SatelliteControlSheet({ noradId, onClose, onCorrected, accentCol
   const translateY = useSharedValue(sheetHeight)
 
   useEffect(() => {
-    translateY.value = withSpring(0, { damping: 46, stiffness: 280 })
+    translateY.value = withSpring(0, { damping: 46, stiffness: 280 }, (finished) => {
+      if (finished && onReady) runOnJS(onReady)()
+    })
   }, [])
 
   const satellite = useOrbitalStore(s => s.satellites.find(sat => sat.noradId.value === Number(noradId)) ?? null)

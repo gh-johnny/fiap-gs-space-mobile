@@ -26,6 +26,7 @@ export function GlobeScreen() {
   const globeDim = useSharedValue(0)
   const [showSheet, setShowSheet] = useState(false)
   const [selectedNoradId, setSelectedNoradId] = useState<string | null>(null)
+  const [sheetReady, setSheetReady] = useState(false)
   const [correctedNoradIds, setCorrectedNoradIds] = useState<Set<string>>(new Set())
   const arcsInitialized = useRef(false)
 
@@ -70,6 +71,8 @@ export function GlobeScreen() {
     void loadConjunctions(conjunctionRepository)
     void loadAlertHistory(alertHistoryRepository)
   }, [])
+
+  useEffect(() => { setSheetReady(false) }, [selectedNoradId])
 
   useOrbitalLoop(
     (ts) => {
@@ -204,7 +207,7 @@ export function GlobeScreen() {
         />
       )}
 
-      {activeAlert && (showSheet || selectedNoradId) && (
+      {activeAlert && (showSheet || (selectedNoradId && sheetReady)) && (
         <MiniAlertBanner
           alert={activeAlert}
           onAcknowledge={() => void handleAcknowledge()}
@@ -230,6 +233,7 @@ export function GlobeScreen() {
           accentColor={satStateColor(selectedNoradId)}
           onClose={handleControlSheetClose}
           onCorrected={handleOrbitalCorrection}
+          onReady={() => setSheetReady(true)}
         />
       )}
 
