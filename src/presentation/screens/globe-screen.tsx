@@ -114,7 +114,7 @@ export function GlobeScreen() {
     globeRef.current?.dimGlobe(0.35)
     globeRef.current?.selectSatellite(Number(noradId))
     const pos = useOrbitalStore.getState().positions.find(p => p.noradId.value === Number(noradId))
-    if (pos) globeRef.current?.focusSatellite(pos.lat, pos.lng)
+    if (pos) globeRef.current?.focusSatellite(Number(noradId), pos.lat, pos.lng)
   }
 
   function handleControlSheetClose() {
@@ -168,7 +168,7 @@ export function GlobeScreen() {
       globeRef.current?.dimGlobe(0.35)
       globeRef.current?.selectSatellite(Number(noradId))
       const pos = useOrbitalStore.getState().positions.find(p => p.noradId.value === Number(noradId))
-      if (pos) globeRef.current?.focusSatellite(pos.lat, pos.lng)
+      if (pos) globeRef.current?.focusSatellite(Number(noradId), pos.lat, pos.lng)
     }
   }
 

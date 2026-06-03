@@ -204,6 +204,30 @@
     var highlightedPair     = null;
     var correctedSatellites = {}; // noradId → true when satellite is manually corrected
 
+    // ─── satellite tracking ───────────────────────────────────────────────────
+    var trackedNoradId   = null;
+    var trackedPosition  = null; // { lat, lng } — updated on every UPDATE_POSITIONS
+    var trackingInterval = null;
+
+    function startTracking(noradId, lat, lng) {
+      clearInterval(trackingInterval);
+      trackedNoradId  = String(noradId);
+      trackedPosition = { lat: lat, lng: lng };
+      world.pointOfView({ lat: lat, lng: lng, altitude: 1.2 }, 1200);
+      trackingInterval = setInterval(function () {
+        if (trackedPosition) {
+          world.pointOfView({ lat: trackedPosition.lat, lng: trackedPosition.lng, altitude: 1.2 }, 200);
+        }
+      }, 150);
+    }
+
+    function stopTracking() {
+      clearInterval(trackingInterval);
+      trackingInterval = null;
+      trackedNoradId   = null;
+      trackedPosition  = null;
+    }
+
     // Returns display color for a satellite based on its unresolved conjunction pairs.
     // A pair is unresolved if NEITHER satellite in it is corrected.
     // Returns null when the satellite has no conjunction pairs at all (use default dot color).
@@ -266,6 +290,11 @@
           });
           renderObjects();
           if (conjunctionPairs.length > 0) rebuildLines();
+          // Keep trackedPosition in sync with latest satellite data
+          if (trackedNoradId) {
+            var tracked = objectsData.find(function (p) { return String(p.label) === trackedNoradId; });
+            if (tracked) trackedPosition = { lat: tracked.lat, lng: tracked.lng };
+          }
           break;
 
         case 'SET_CONJUNCTION_PAIRS':
@@ -335,19 +364,16 @@
           break;
 
         case 'DESELECT_SATELLITE':
+          stopTracking();
           selectedNoradId = null;
           objectsData = objectsData.map(function(p) {
             return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
           });
           renderObjects();
-          clearTimeout(resumeTimer);
-          resumeTimer = setTimeout(function () { world.controls().autoRotate = true; }, 1500);
           break;
 
         case 'FOCUS_SATELLITE': {
-          world.controls().autoRotate = false;
-          clearTimeout(resumeTimer);
-          world.pointOfView({ lat: msg.payload.lat, lng: msg.payload.lng, altitude: 1.2 }, 1200);
+          startTracking(msg.payload.noradId, msg.payload.lat, msg.payload.lng);
           break;
         }
 
