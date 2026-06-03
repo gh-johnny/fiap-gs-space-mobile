@@ -105,9 +105,31 @@
         wrap.appendChild(arrow);
       }
 
+      // Long-press detection via elapsed time, not setTimeout.
+      // Reason: (a) touchmove cancels timers even for imperceptible micro-movements;
+      //         (b) globe.gl recreates elements on every renderObjects(), so per-element
+      //             timer/flag state is lost mid-gesture. Global timestamp survives re-creation.
+      wrap.addEventListener('touchstart', function() {
+        longPressDownNoradId = String(d.label);
+        longPressDownTime    = Date.now();
+      }, { passive: true });
+
       function fire(e) {
         e.preventDefault();
         e.stopPropagation();
+        var sid     = String(d.label);
+        var elapsed = (sid === longPressDownNoradId) ? (Date.now() - longPressDownTime) : 0;
+        if (elapsed >= 500) {
+          longPressOrbitNoradId     = sid;
+          longPressOrbitUpdatesLeft = 3;
+          var sat = objectsData.find(function(p) { return String(p.label) === sid; });
+          if (sat && velocityAngles[sid] !== undefined) {
+            drawOrbit(sat.lat, sat.lng, sat.alt,
+              velocityAngles[sid] + (correctionAngles[sid] || 0), sat.color);
+          }
+          document.getElementById('overlay').style.background = 'rgba(0,0,0,0.35)';
+          return;
+        }
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(JSON.stringify({
             type: 'SATELLITE_TAPPED',
@@ -293,6 +315,10 @@
     var velocityAngles   = {};   // noradId → bearing degrees (0=N, 90=E, 180=S, 270=W)
     var correctionAngles = {};   // noradId → ±offset degrees assigned on MARK_CORRECTED
     var correctionDrift  = {};   // noradId → {dlat, dlng} static positional nudge
+    var longPressDownNoradId  = null; // noradId of the satellite being held
+    var longPressDownTime     = 0;    // Date.now() of last touchstart on a satellite dot
+    var longPressOrbitNoradId     = null; // noradId whose orbit is currently shown
+    var longPressOrbitUpdatesLeft = 0;    // UPDATE_POSITIONS ticks before orbit clears
 
     // ─── satellite tracking ───────────────────────────────────────────────────
     var trackedNoradId   = null;
@@ -408,6 +434,24 @@
             if (orbitData) drawOrbit(orbitData.lat, orbitData.lng, orbitData.alt,
               velocityAngles[selectedNoradId] + (correctionAngles[selectedNoradId] || 0), orbitData.color);
           }
+          // Long-press orbit: tick countdown, update ring position, clear when expired
+          if (longPressOrbitNoradId && longPressOrbitNoradId !== selectedNoradId) {
+            if (longPressOrbitUpdatesLeft > 0) {
+              longPressOrbitUpdatesLeft--;
+              var lpSat = objectsData.find(function(p) { return String(p.label) === longPressOrbitNoradId; });
+              if (lpSat && velocityAngles[longPressOrbitNoradId] !== undefined) {
+                drawOrbit(lpSat.lat, lpSat.lng, lpSat.alt,
+                  velocityAngles[longPressOrbitNoradId] + (correctionAngles[longPressOrbitNoradId] || 0),
+                  lpSat.color);
+              }
+            } else {
+              clearOrbit();
+              longPressOrbitNoradId = null;
+              if (!selectedNoradId) {
+                document.getElementById('overlay').style.background = 'rgba(0,0,0,0)';
+              }
+            }
+          }
           break;
         }
 
@@ -467,6 +511,8 @@
           break;
 
         case 'SELECT_SATELLITE':
+          longPressOrbitNoradId = null;
+          longPressOrbitUpdatesLeft = 0;
           selectedNoradId = String(msg.payload.noradId);
           objectsData = objectsData.map(function(p) {
             if (String(p.label) === selectedNoradId) {
@@ -478,6 +524,8 @@
           break;
 
         case 'DESELECT_SATELLITE':
+          longPressOrbitNoradId = null;
+          longPressOrbitUpdatesLeft = 0;
           stopTracking();
           clearOrbit();
           selectedNoradId = null;
@@ -488,6 +536,8 @@
           break;
 
         case 'FOCUS_SATELLITE': {
+          longPressOrbitNoradId = null;
+          longPressOrbitUpdatesLeft = 0;
           startTracking(msg.payload.noradId, msg.payload.lat, msg.payload.lng);
           var fSid  = String(msg.payload.noradId);
           var fData = objectsData.find(function(p) { return String(p.label) === fSid; });
