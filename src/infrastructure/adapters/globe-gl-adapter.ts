@@ -84,6 +84,10 @@ export class GlobeGlAdapter implements IGlobeGlAdapter {
     this.postMessage({ type: 'SET_GLOBE_TEXTURE', payload: { mode } })
   }
 
+  setSimpleMode(simple: boolean): void {
+    this.postMessage({ type: 'SET_SIMPLE_MODE', payload: { simple } })
+  }
+
   focusSatellite(noradId: number, lat: number, lng: number): void {
     this.postMessage({ type: 'FOCUS_SATELLITE', payload: { noradId, lat, lng } })
   }

@@ -41,14 +41,27 @@ export function GlobeScreen() {
 
   const { positions, loadSatellites, propagatePositions } = useOrbitalStore()
   const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlertFor, acknowledgeCurrentAlert, dismissAlert, incrementCorrected } = useAlertStore()
-  const { globeMode } = useUIStore()
+  const { globeMode, simpleMode } = useUIStore()
 
   useEffect(() => {
     globeRef.current?.setGlobeTexture(globeMode)
   }, [globeMode])
 
+  useEffect(() => {
+    globeRef.current?.setSimpleMode(simpleMode)
+  }, [simpleMode])
+
   function handleGlobeReady() {
     globeRef.current?.setGlobeTexture(globeMode)
+    globeRef.current?.setSimpleMode(simpleMode)
+    const { conjunctions: currentConjunctions } = useAlertStore.getState()
+    if (currentConjunctions.length > 0) {
+      globeRef.current?.showConjunctionPairs(currentConjunctions)
+    }
+    correctedNoradIds.forEach(noradId => {
+      globeRef.current?.markCorrected(Number(noradId))
+    })
+    arcsInitialized.current = false
   }
 
   function handleTrigger() {
@@ -105,7 +118,7 @@ export function GlobeScreen() {
         }
       }
     },
-    3000,
+    500,
   )
 
   const { onTap } = useHiddenTrigger({
