@@ -41,7 +41,7 @@ export function MiniAlertBanner({ alert, onAcknowledge, onDismiss }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    top: 138,
+    top: 141,
     left: 16,
     right: 16,
     height: 56,
