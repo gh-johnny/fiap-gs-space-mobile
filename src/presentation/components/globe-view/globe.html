@@ -55,7 +55,7 @@
       var isSelected = String(d.label) === selectedNoradId;
       var sid        = String(d.label);
       var shadow     = 'box-shadow:0 0 ' + glow + 'px ' + d.color + 'aa'
-                     + (isSelected ? ',0 0 ' + (glow * 1.8) + 'px #ffffff55' : '');
+                     + (isSelected ? ',0 0 ' + (glow * 1.8) + 'px ' + d.color + '66' : '');
 
       // Wrapper — globe.gl positions this element; children are the dot + arrow
       var wrap = document.createElement('div');
@@ -84,20 +84,21 @@
       ].join(';');
       wrap.appendChild(dot);
 
-      // Directional arrow — only for non-selected, normal-radius satellites with known velocity
-      if (!isSelected && d.radius < 1 && velocityAngles[sid] !== undefined) {
+      // Directional arrow — shown for all satellites with known velocity, scales with dot size
+      if (velocityAngles[sid] !== undefined) {
         var heading   = velocityAngles[sid] + (correctionAngles[sid] || 0);
         var arrowDist = Math.round(px / 2) + 5;
+        var arrowW    = Math.max(4, Math.round(px * 0.35));
+        var arrowH    = Math.max(3, Math.round(px * 0.22));
         var arrow = document.createElement('div');
         arrow.style.cssText = [
           'position:absolute',
           'top:50%',
           'left:50%',
-          'width:4px',
-          'height:5px',
+          'width:'  + arrowW + 'px',
+          'height:' + arrowH + 'px',
           'clip-path:polygon(50% 0%,0% 100%,100% 100%)',
           'background:rgba(255,255,255,0.5)',
-          // translate to center → rotate to heading → move forward by arrowDist
           'transform:translate(-50%,-50%) rotate(' + heading + 'deg) translateY(-' + arrowDist + 'px)',
           'pointer-events:none',
         ].join(';');
@@ -153,6 +154,10 @@
     // They connect satellite positions at orbital altitude — no surface contact.
     var lineGroup = new THREE.Group();
     world.scene().add(lineGroup);
+
+    // ─── orbit ring layer ─────────────────────────────────────────────────────
+    var orbitGroup = new THREE.Group();
+    world.scene().add(orbitGroup);
 
     // Great-circle arc at orbital altitude using SLERP — never cuts through the globe
     function makeLine(posA, posB, color, opacity, isHighlight) {
@@ -219,6 +224,49 @@
           lineGroup.add(makeLine(hA, hB, HIGHLIGHT_COLOR, HIGHLIGHT_OPACITY, true));
         }
       }
+    }
+
+    // ─── orbit ring helpers ───────────────────────────────────────────────────
+    function clearOrbit() {
+      while (orbitGroup.children.length > 0) {
+        var c = orbitGroup.children[0];
+        c.geometry.dispose();
+        c.material.dispose();
+        orbitGroup.remove(c);
+      }
+    }
+
+    // Draws a great-circle ring at the satellite's orbital altitude.
+    // The plane is determined by the satellite's position + velocity bearing.
+    function drawOrbit(lat, lng, altNorm, bearingDeg, color) {
+      clearOrbit();
+      var r       = GLOBE_R * (1 + altNorm);
+      var bRad    = bearingDeg * Math.PI / 180;
+      var eps     = 1.0; // degrees — large enough for stable numerical tangent
+
+      var posUnit  = polar2Cart(lat, lng, 0).normalize();
+      var pos2Unit = polar2Cart(
+        lat + Math.cos(bRad) * eps,
+        lng + Math.sin(bRad) * eps,
+        0
+      ).normalize();
+      var tangent  = pos2Unit.clone().sub(posUnit).normalize();
+      var normal   = posUnit.clone().cross(tangent).normalize();
+      var bX       = posUnit.clone();
+      var bY       = normal.clone().cross(bX).normalize();
+
+      var SEGMENTS = 128;
+      var points   = [];
+      for (var i = 0; i <= SEGMENTS; i++) {
+        var a = (i / SEGMENTS) * Math.PI * 2;
+        points.push(
+          bX.clone().multiplyScalar(r * Math.cos(a))
+            .add(bY.clone().multiplyScalar(r * Math.sin(a)))
+        );
+      }
+      var geo = new THREE.BufferGeometry().setFromPoints(points);
+      var mat = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.28 });
+      orbitGroup.add(new THREE.Line(geo, mat));
     }
 
     // Breathing pulse — background lines breathe gently, highlight line glows stronger
@@ -343,7 +391,7 @@
               lng: p.lng + (drift ? drift.dlng : 0),
               alt: Math.max(0.04, Math.min(p.alt * 2, 0.38)),
               originalColor: baseColor,
-              color:  isSel ? '#FFFFFF' : baseColor,
+              color:  baseColor,
               radius: isSel ? 1.8 : 0.3,
               label:  sid,
             };
@@ -353,6 +401,11 @@
           if (trackedNoradId) {
             var tracked = objectsData.find(function (p) { return String(p.label) === trackedNoradId; });
             if (tracked) trackedPosition = { lat: tracked.lat, lng: tracked.lng };
+          }
+          // Keep orbit ring in sync with the selected satellite's moving position
+          if (selectedNoradId && velocityAngles[selectedNoradId] !== undefined) {
+            var orbitData = objectsData.find(function(p) { return String(p.label) === selectedNoradId; });
+            if (orbitData) drawOrbit(orbitData.lat, orbitData.lng, orbitData.alt, velocityAngles[selectedNoradId], orbitData.color);
           }
           break;
         }
@@ -416,7 +469,7 @@
           selectedNoradId = String(msg.payload.noradId);
           objectsData = objectsData.map(function(p) {
             if (String(p.label) === selectedNoradId) {
-              return Object.assign({}, p, { radius: 1.8, color: '#FFFFFF' });
+              return Object.assign({}, p, { radius: 1.8 });
             }
             return Object.assign({}, p, { radius: 0.15 });
           });
@@ -425,6 +478,7 @@
 
         case 'DESELECT_SATELLITE':
           stopTracking();
+          clearOrbit();
           selectedNoradId = null;
           objectsData = objectsData.map(function(p) {
             return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
@@ -434,6 +488,11 @@
 
         case 'FOCUS_SATELLITE': {
           startTracking(msg.payload.noradId, msg.payload.lat, msg.payload.lng);
+          var fSid  = String(msg.payload.noradId);
+          var fData = objectsData.find(function(p) { return String(p.label) === fSid; });
+          if (fData && velocityAngles[fSid] !== undefined) {
+            drawOrbit(msg.payload.lat, msg.payload.lng, fData.alt, velocityAngles[fSid], fData.color);
+          }
           break;
         }
 
