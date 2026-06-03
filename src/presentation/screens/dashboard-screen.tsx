@@ -6,17 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAlertStore } from '@/application/stores/use-alert-store'
 import { useOrbitalStore } from '@/application/stores/use-orbital-store'
 import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
-import type { Severity } from '@/domain/value-objects'
-
-const SEVERITY_COLOR: Record<Severity, string> = {
-  CRITICAL: '#FF3B30',
-  WARNING: '#FF9500',
-  INFO: '#FFD60A',
-}
+import { SEVERITY_COLORS } from '@/constants/theme'
 
 export function DashboardScreen() {
   const insets = useSafeAreaInsets()
-  const { conjunctions, alertHistory } = useAlertStore()
+  const { conjunctions, activeAlert, correctedCount } = useAlertStore()
   const { positions } = useOrbitalStore()
 
   const criticals = conjunctions.filter((c) => c.severity === 'CRITICAL')
@@ -39,7 +33,9 @@ export function DashboardScreen() {
   }, [riskIndex])
   const riskBarStyle = useAnimatedStyle(() => ({ flex: riskWidth.value / 100 }))
 
-  const upcoming = conjunctions.slice(0, 5)
+  const upcoming = [...conjunctions]
+    .sort((a, b) => a.tcpa.date.getTime() - b.tcpa.date.getTime())
+    .slice(0, 6)
 
   return (
     <View style={styles.root}>
@@ -53,6 +49,22 @@ export function DashboardScreen() {
       >
         <Text style={styles.title}>ORBITAL INTEL</Text>
         <Text style={styles.subtitle}>Space Situational Awareness</Text>
+
+        {/* Active alert banner */}
+        {activeAlert && (
+          <BlurView intensity={40} tint="dark" style={[styles.card, styles.alertBanner]}>
+            <View style={[styles.alertBannerDot, { backgroundColor: SEVERITY_COLORS[activeAlert.conjunctionEvent.severity] }]} />
+            <View style={styles.alertBannerBody}>
+              <Text style={styles.alertBannerLabel}>ALERTA ATIVO</Text>
+              <Text style={styles.alertBannerObjects} numberOfLines={1}>
+                {activeAlert.conjunctionEvent.objectA.name} × {activeAlert.conjunctionEvent.objectB.name}
+              </Text>
+            </View>
+            <Text style={[styles.alertBannerSev, { color: SEVERITY_COLORS[activeAlert.conjunctionEvent.severity] }]}>
+              {activeAlert.conjunctionEvent.severity}
+            </Text>
+          </BlurView>
+        )}
 
         {/* Row: Risk Index + Objects */}
         <View style={styles.row}>
@@ -71,8 +83,10 @@ export function DashboardScreen() {
             <Text style={styles.bigNumber}>{positions.length || '—'}</Text>
             <Text style={styles.cardSub}>objetos em órbita</Text>
             <View style={styles.spacer} />
-            <Text style={styles.cardLabel}>ALERTAS LOG</Text>
-            <Text style={styles.medNumber}>{alertHistory.length}</Text>
+            <Text style={styles.cardLabel}>CORRIGIDAS</Text>
+            <Text style={[styles.medNumber, correctedCount > 0 && { color: '#34C759' }]}>
+              {correctedCount}
+            </Text>
           </BlurView>
         </View>
 
@@ -80,9 +94,9 @@ export function DashboardScreen() {
         <BlurView intensity={40} tint="dark" style={styles.card}>
           <Text style={styles.cardLabel}>CONJUNÇÕES DETECTADAS</Text>
           <View style={styles.severityList}>
-            <SeverityRow color="#FF3B30" label="CRITICAL" count={criticals.length} />
-            <SeverityRow color="#FF9500" label="WARNING" count={warnings.length} />
-            <SeverityRow color="#FFD60A" label="INFO" count={infos.length} />
+            <SeverityRow color={SEVERITY_COLORS.CRITICAL} label="CRITICAL" count={criticals.length} />
+            <SeverityRow color={SEVERITY_COLORS.WARNING} label="WARNING" count={warnings.length} />
+            <SeverityRow color={SEVERITY_COLORS.INFO} label="INFO" count={infos.length} />
           </View>
         </BlurView>
 
@@ -93,14 +107,14 @@ export function DashboardScreen() {
             ? <Text style={styles.empty}>Sem eventos carregados — abra o Globo primeiro</Text>
             : upcoming.map((c, i) => (
               <View key={i} style={styles.eventRow}>
-                <View style={[styles.eventDot, { backgroundColor: SEVERITY_COLOR[c.severity] }]} />
+                <View style={[styles.eventDot, { backgroundColor: SEVERITY_COLORS[c.severity] }]} />
                 <View style={styles.eventInfo}>
                   <Text style={styles.eventObjects} numberOfLines={1}>
                     {c.objectA.name} × {c.objectB.name}
                   </Text>
                   <Text style={styles.eventTcpa}>{c.tcpa.toDisplayString()}</Text>
                 </View>
-                <Text style={[styles.eventSeverity, { color: SEVERITY_COLOR[c.severity] }]}>
+                <Text style={[styles.eventSeverity, { color: SEVERITY_COLORS[c.severity] }]}>
                   {c.severity.slice(0, 4)}
                 </Text>
               </View>
@@ -222,4 +236,10 @@ const styles = StyleSheet.create({
   zoneRemainder: { flex: 1 },
   zoneCount: { width: 24, textAlign: 'right', fontSize: 13, fontWeight: '700' },
   empty: { color: 'rgba(255,255,255,0.25)', fontSize: 12, fontStyle: 'italic' },
+  alertBanner: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  alertBannerDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  alertBannerBody: { flex: 1, gap: 2 },
+  alertBannerLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: '700', letterSpacing: 1.5 },
+  alertBannerObjects: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  alertBannerSev: { fontSize: 10, fontWeight: '700', letterSpacing: 1 },
 })

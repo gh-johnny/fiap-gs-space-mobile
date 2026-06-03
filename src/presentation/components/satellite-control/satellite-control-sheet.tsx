@@ -18,6 +18,7 @@ interface Props {
   noradId: string
   onClose: () => void
   onCorrected?: () => void
+  accentColor?: string
 }
 
 const CLOSE_THRESHOLD = 100
@@ -104,14 +105,14 @@ function SatelliteIllustration({ satType, color }: { satType: string; color: str
 
 // ─── live dot ─────────────────────────────────────────────────────────────────
 
-function LiveDot() {
+function LiveDot({ color = '#00E5FF' }: { color?: string }) {
   const opacity = useSharedValue(1)
   useEffect(() => {
     opacity.value = withRepeat(withTiming(0.15, { duration: 750 }), -1, true)
     return () => cancelAnimation(opacity)
   }, [])
   const s = useAnimatedStyle(() => ({ opacity: opacity.value }))
-  return <Animated.View style={[styles.liveDot, s]} />
+  return <Animated.View style={[styles.liveDot, { backgroundColor: color }, s]} />
 }
 
 // ─── mode selector ─────────────────────────────────────────────────────────────
@@ -205,7 +206,7 @@ function OrbitalCorrectionButton({ color, onComplete }: { color: string; onCompl
 
 // ─── main sheet ────────────────────────────────────────────────────────────────
 
-export function SatelliteControlSheet({ noradId, onClose, onCorrected }: Props) {
+export function SatelliteControlSheet({ noradId, onClose, onCorrected, accentColor }: Props) {
   const { height: screenHeight } = useWindowDimensions()
   const sheetHeight = Math.round(screenHeight * 0.80)
 
@@ -234,7 +235,7 @@ export function SatelliteControlSheet({ noradId, onClose, onCorrected }: Props) 
   const [activeMode, setActiveMode] = useState<Mode>('NOMINAL')
 
   const satType = satellite?.type ?? ''
-  const color   = typeColor(satType)
+  const color   = accentColor ?? typeColor(satType)
   const band    = position ? orbitBand(position.alt) : null
   const vel     = position ? Math.sqrt(398600 / (6371 + position.alt)).toFixed(1) : null
 
@@ -277,8 +278,8 @@ export function SatelliteControlSheet({ noradId, onClose, onCorrected }: Props) 
           </View>
 
           {/* Compact telemetry */}
-          <View style={[styles.telemetry, { borderColor: color + '22' }]}>
-            <LiveDot />
+          <View style={[styles.telemetry, { borderColor: color + '22', backgroundColor: color + '0A' }]}>
+            <LiveDot color={color} />
             <Text style={[styles.telemetryDivider, { color: color + '40' }]}>·</Text>
             {position ? (
               <>
@@ -416,8 +417,8 @@ const styles = StyleSheet.create({
   closeBtnText: { color: 'rgba(255,255,255,0.4)', fontSize: 13 },
 
   // telemetry
-  telemetry: { marginHorizontal: 16, marginVertical: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, backgroundColor: 'rgba(0,229,255,0.03)', borderWidth: StyleSheet.hairlineWidth },
-  liveDot:   { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00E5FF' },
+  telemetry: { marginHorizontal: 16, marginVertical: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth },
+  liveDot:   { width: 6, height: 6, borderRadius: 3 },
   telemetryDivider: { fontSize: 12 },
   telemetryItem: {},
   telemetryKey: { color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '600', letterSpacing: 0.5 },

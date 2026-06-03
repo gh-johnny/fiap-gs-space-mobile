@@ -7,12 +7,7 @@ import { useUIStore } from '@/application/stores/use-ui-store'
 import { useContainer } from '@/application/container/container-context'
 import { formatPc, formatMissDistance, formatTcpa, formatWindow } from '@/presentation/utils/format-simple'
 import type { Severity } from '@/domain/value-objects'
-
-const SEVERITY_COLORS: Record<Severity, string> = {
-  CRITICAL: '#FF3B30',
-  WARNING: '#FF9500',
-  INFO: '#34C759',
-}
+import { SEVERITY_COLORS } from '@/constants/theme'
 
 const SEVERITY_LABELS: Record<Severity, string> = {
   CRITICAL: 'CRÍTICO',

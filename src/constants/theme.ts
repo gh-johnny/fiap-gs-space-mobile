@@ -24,13 +24,19 @@ export const Colors = {
   },
 } as const;
 
+export const SEVERITY_COLORS = {
+  CRITICAL: '#FF3B30',
+  WARNING:  '#FF9500',
+  INFO:     '#FFD60A',
+} as const
+
 export const OrbitalColors = {
   background: '#000814',
 
   alert: {
     critical: '#FF3B30',
-    warning: '#FF9500',
-    info:     '#34C759',
+    warning:  '#FF9500',
+    info:     '#FFD60A',
   },
 
   satellite:       '#00E5FF',

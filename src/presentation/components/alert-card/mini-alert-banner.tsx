@@ -2,6 +2,7 @@ import { StyleSheet, View, Text, TouchableOpacity } from 'react-native'
 import { BlurView } from 'expo-blur'
 import { useRouter } from 'expo-router'
 import { OrbitalAlert } from '@/domain/entities'
+import { SEVERITY_COLORS } from '@/constants/theme'
 
 interface Props {
   alert: OrbitalAlert
@@ -9,16 +10,10 @@ interface Props {
   onDismiss: () => void
 }
 
-function severityColor(s: string) {
-  if (s === 'CRITICAL') return '#FF3B30'
-  if (s === 'WARNING') return '#FF9500'
-  return '#FFD60A'
-}
-
 export function MiniAlertBanner({ alert, onAcknowledge, onDismiss }: Props) {
   const router = useRouter()
   const ev    = alert.conjunctionEvent
-  const color = severityColor(ev.severity)
+  const color = SEVERITY_COLORS[ev.severity]
 
   return (
     <View style={styles.wrap}>

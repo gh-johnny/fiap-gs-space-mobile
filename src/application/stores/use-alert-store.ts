@@ -11,12 +11,15 @@ interface AlertState {
   conjunctions: ConjunctionEvent[]
   alertHistory: OrbitalAlert[]
   activeAlert: OrbitalAlert | null
+  correctedCount: number
   loadConjunctions: (repo: IConjunctionRepository) => Promise<void>
   loadAlertHistory: (repo: IAlertHistoryRepository) => Promise<void>
   triggerAlert: () => void
   triggerAlertFor: (event: ConjunctionEvent) => void
   acknowledgeCurrentAlert: (useCase: AcknowledgeAlert) => Promise<void>
   dismissAlert: () => void
+  incrementCorrected: () => void
+  removeConjunction: (noradIdA: string, noradIdB: string) => void
   spawnRandomConjunction: (satellites: SatelliteObject[]) => ConjunctionEvent | null
   reset: () => void
 }
@@ -25,6 +28,7 @@ export const useAlertStore = create<AlertState>((set, get) => ({
   conjunctions: [],
   alertHistory: [],
   activeAlert: null,
+  correctedCount: 0,
 
   async loadConjunctions(repo) {
     const conjunctions = await repo.findAll()
@@ -57,6 +61,20 @@ export const useAlertStore = create<AlertState>((set, get) => ({
 
   dismissAlert() {
     set({ activeAlert: null })
+  },
+
+  incrementCorrected() {
+    set((s) => ({ correctedCount: s.correctedCount + 1 }))
+  },
+
+  removeConjunction(noradIdA, noradIdB) {
+    set((s) => ({
+      conjunctions: s.conjunctions.filter((c) => {
+        const a = String(c.objectA.noradId.value)
+        const b = String(c.objectB.noradId.value)
+        return !((a === noradIdA && b === noradIdB) || (a === noradIdB && b === noradIdA))
+      }),
+    }))
   },
 
   spawnRandomConjunction(satellites) {

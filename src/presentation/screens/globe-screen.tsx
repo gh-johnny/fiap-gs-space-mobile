@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import { StyleSheet, View, Text, TouchableOpacity, useWindowDimensions } from 'react-native'
 import { useSharedValue, withTiming } from 'react-native-reanimated'
 import { useRouter } from 'expo-router'
@@ -10,6 +10,7 @@ import { SatelliteControlSheet } from '@/presentation/components/satellite-contr
 import { IGlobeGlAdapter } from '@/infrastructure/adapters/i-globe-gl-adapter'
 import { useOrbitalStore } from '@/application/stores/use-orbital-store'
 import { useAlertStore } from '@/application/stores/use-alert-store'
+import { SEVERITY_COLORS } from '@/constants/theme'
 import { useUIStore } from '@/application/stores/use-ui-store'
 import { useOrbitalLoop } from '@/presentation/hooks/use-orbital-loop'
 import { useHiddenTrigger } from '@/presentation/hooks/use-hidden-trigger'
@@ -22,6 +23,7 @@ export function GlobeScreen() {
   const globeDim = useSharedValue(0)
   const [showSheet, setShowSheet] = useState(false)
   const [selectedNoradId, setSelectedNoradId] = useState<string | null>(null)
+  const [correctedNoradIds, setCorrectedNoradIds] = useState<Set<string>>(new Set())
   const arcsInitialized = useRef(false)
 
   const {
@@ -34,7 +36,7 @@ export function GlobeScreen() {
   } = useContainer()
 
   const { positions, loadSatellites, propagatePositions } = useOrbitalStore()
-  const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlertFor, acknowledgeCurrentAlert, dismissAlert } = useAlertStore()
+  const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlertFor, acknowledgeCurrentAlert, dismissAlert, incrementCorrected } = useAlertStore()
   const { simpleMode, toggleSimpleMode } = useUIStore()
 
   function handleTrigger() {
@@ -114,7 +116,30 @@ export function GlobeScreen() {
     if (!selectedNoradId) return
     globeRef.current?.markCorrected(Number(selectedNoradId))
     dismissAlert()
+    incrementCorrected()
+    setCorrectedNoradIds(prev => new Set([...prev, selectedNoradId]))
   }
+
+  const satStateColor = useCallback((noradId: string): string => {
+    if (correctedNoradIds.has(noradId)) return '#34C759'
+
+    const allPairs = conjunctions.filter(
+      c => String(c.objectA.noradId.value) === noradId || String(c.objectB.noradId.value) === noradId,
+    )
+    if (allPairs.length === 0) return '#00E5FF'
+
+    const unresolvedPairs = allPairs.filter(c =>
+      !correctedNoradIds.has(String(c.objectA.noradId.value)) &&
+      !correctedNoradIds.has(String(c.objectB.noradId.value)),
+    )
+    if (unresolvedPairs.length === 0) return '#34C759'
+
+    const rank = { CRITICAL: 3, WARNING: 2, INFO: 1 } as const
+    const highest = unresolvedPairs.reduce((best, c) =>
+      rank[c.severity] > rank[best.severity] ? c : best,
+    )
+    return SEVERITY_COLORS[highest.severity]
+  }, [correctedNoradIds, conjunctions])
 
   function handleDismiss() {
     dismissAlert()
@@ -160,7 +185,7 @@ export function GlobeScreen() {
         </View>
       </View>
 
-      {activeAlert && !selectedNoradId && (
+      {activeAlert && !showSheet && !selectedNoradId && (
         <AlertCard
           alert={activeAlert}
           visible={!!activeAlert}
@@ -170,7 +195,7 @@ export function GlobeScreen() {
         />
       )}
 
-      {activeAlert && selectedNoradId && (
+      {activeAlert && (showSheet || selectedNoradId) && (
         <MiniAlertBanner
           alert={activeAlert}
           onAcknowledge={() => void handleAcknowledge()}
@@ -178,11 +203,22 @@ export function GlobeScreen() {
         />
       )}
 
-      {showSheet && <ConjunctionListSheet onClose={() => setShowSheet(false)} />}
+      {showSheet && (
+        <ConjunctionListSheet
+          onClose={() => setShowSheet(false)}
+          correctedNoradIds={correctedNoradIds}
+          onOpenControlSheet={(noradId) => {
+            setShowSheet(false)
+            handleSatelliteTap(noradId)
+          }}
+        />
+      )}
 
       {selectedNoradId && (
         <SatelliteControlSheet
+          key={selectedNoradId}
           noradId={selectedNoradId}
+          accentColor={satStateColor(selectedNoradId)}
           onClose={handleControlSheetClose}
           onCorrected={handleOrbitalCorrection}
         />

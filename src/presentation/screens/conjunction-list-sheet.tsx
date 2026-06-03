@@ -6,19 +6,35 @@ import { BlurView } from 'expo-blur'
 import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 import { ConjunctionItem } from '@/presentation/components/conjunction-item/conjunction-item'
 import { useAlertStore } from '@/application/stores/use-alert-store'
+import type { ConjunctionEvent } from '@/domain/entities'
 
-interface ConjunctionListSheetProps {
+interface Props {
   onClose: () => void
+  onOpenControlSheet: (noradId: string) => void
+  correctedNoradIds: Set<string>
 }
 
-const SHEET_HEIGHT = 500
+const SHEET_HEIGHT = 520
 const CLOSE_THRESHOLD = 80
+const SEVERITY_RANK = { CRITICAL: 0, WARNING: 1, INFO: 2 } as const
 
-export function ConjunctionListSheet({ onClose }: ConjunctionListSheetProps) {
+function isCorrectedConjunction(c: ConjunctionEvent, correctedNoradIds: Set<string>): boolean {
+  return (
+    correctedNoradIds.has(String(c.objectA.noradId.value)) ||
+    correctedNoradIds.has(String(c.objectB.noradId.value))
+  )
+}
+
+export function ConjunctionListSheet({ onClose, onOpenControlSheet, correctedNoradIds }: Props) {
   const translateY = useSharedValue(0)
-  const { conjunctions, alertHistory } = useAlertStore()
+  const { conjunctions, removeConjunction } = useAlertStore()
 
-  // Pan gesture applied ONLY to the handle — ScrollView scrolls independently
+  const active = conjunctions
+    .filter((c) => !isCorrectedConjunction(c, correctedNoradIds))
+    .sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])
+
+  const corrected = conjunctions.filter((c) => isCorrectedConjunction(c, correctedNoradIds))
+
   const pan = Gesture.Pan()
     .onUpdate((e) => {
       translateY.value = Math.max(0, e.translationY)
@@ -44,6 +60,7 @@ export function ConjunctionListSheet({ onClose }: ConjunctionListSheetProps) {
           <View style={styles.handleArea}>
             <View style={styles.handle} />
             <Text style={styles.sheetTitle}>CONJUNÇÕES ATIVAS</Text>
+            <Text style={styles.sheetCount}>{conjunctions.length}</Text>
           </View>
         </GestureDetector>
 
@@ -52,50 +69,45 @@ export function ConjunctionListSheet({ onClose }: ConjunctionListSheetProps) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <Section title="Críticas & Alerta">
-            {conjunctions.filter(e => e.severity !== 'INFO').length === 0
-              ? <Text style={styles.empty}>Nenhuma conjunção crítica</Text>
-              : conjunctions
-                  .filter(e => e.severity !== 'INFO')
-                  .map((e, i) => <ConjunctionItem key={i} event={e} />)
-            }
-          </Section>
-
-          <Section title="Informativas">
-            {conjunctions.filter(e => e.severity === 'INFO').length === 0
-              ? <Text style={styles.empty}>Nenhuma</Text>
-              : conjunctions
-                  .filter(e => e.severity === 'INFO')
-                  .map((e, i) => <ConjunctionItem key={i} event={e} />)
-            }
-          </Section>
-
-          <Section title="Histórico">
-            {alertHistory.length === 0
-              ? <Text style={styles.empty}>Nenhum alerta registrado</Text>
-              : alertHistory.map((a) => (
-                <View key={a.id} style={styles.historyItem}>
-                  <Text style={styles.historyName} numberOfLines={1}>
-                    {a.conjunctionEvent.objectA.name} × {a.conjunctionEvent.objectB.name}
-                  </Text>
-                  <Text style={styles.historyStatus}>{a.status.toUpperCase()}</Text>
-                </View>
+          {/* Active conjunctions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>ATIVAS — {active.length}</Text>
+            {active.length === 0
+              ? <Text style={styles.empty}>Nenhuma conjunção ativa</Text>
+              : active.map((c, i) => (
+                <ConjunctionItem
+                  key={i}
+                  event={c}
+                  isCorrected={false}
+                  onCorrect={() => onOpenControlSheet(String(c.objectA.noradId.value))}
+                />
               ))
             }
-          </Section>
+          </View>
+
+          {/* Corrected conjunctions — only shown when there are some */}
+          {corrected.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>CORRIGIDAS — {corrected.length}</Text>
+              {corrected.map((c, i) => (
+                <ConjunctionItem
+                  key={i}
+                  event={c}
+                  isCorrected
+                  onRemove={() =>
+                    removeConjunction(
+                      String(c.objectA.noradId.value),
+                      String(c.objectB.noradId.value),
+                    )
+                  }
+                />
+              ))}
+            </View>
+          )}
         </ScrollView>
 
       </BlurView>
     </Animated.View>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
   )
 }
 
@@ -115,16 +127,16 @@ const styles = StyleSheet.create({
   handleArea: {
     alignItems: 'center',
     paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
+    gap: 4,
   },
   handle: {
     width: 40,
     height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.25)',
-    marginBottom: 10,
   },
   sheetTitle: {
     color: 'rgba(255,255,255,0.5)',
@@ -132,27 +144,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 2,
   },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 32 },
-  section: { paddingHorizontal: 16, paddingTop: 16, gap: 8 },
-  sectionTitle: {
-    color: 'rgba(255,255,255,0.35)',
+  sheetCount: {
+    color: 'rgba(255,255,255,0.2)',
     fontSize: 10,
     fontWeight: '600',
+    letterSpacing: 1,
+  },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 32 },
+  section: { paddingHorizontal: 16, paddingTop: 16, gap: 0 },
+  sectionTitle: {
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 9,
+    fontWeight: '700',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginBottom: 2,
+    marginBottom: 10,
   },
   empty: { color: 'rgba(255,255,255,0.25)', fontSize: 13, fontStyle: 'italic' },
-  historyItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 8,
-    padding: 10,
-    gap: 8,
-  },
-  historyName: { color: 'rgba(255,255,255,0.7)', fontSize: 12, flex: 1 },
-  historyStatus: { color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: 0.5 },
 })

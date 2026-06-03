@@ -7,6 +7,7 @@ import type { Severity } from '@/domain/value-objects'
 import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 import { useUIStore } from '@/application/stores/use-ui-store'
 import { formatPc, formatMissDistance, formatTcpa, formatWindow } from '@/presentation/utils/format-simple'
+import { SEVERITY_COLORS } from '@/constants/theme'
 
 interface AlertCardProps {
   alert: OrbitalAlert
@@ -14,12 +15,6 @@ interface AlertCardProps {
   onAcknowledge: () => void
   onDismiss: () => void
   visible: boolean
-}
-
-const SEVERITY_COLORS: Record<Severity, string> = {
-  CRITICAL: '#FF3B30',
-  WARNING: '#FF9500',
-  INFO: '#34C759',
 }
 
 const SEVERITY_LABELS: Record<Severity, string> = {
