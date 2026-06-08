@@ -1,14 +1,12 @@
 import React, { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
-import { useContainer } from '@/application/container/container-context'
 import { GlobeScreen } from '@/presentation/screens/globe-screen'
 import { DashboardScreen } from '@/presentation/screens/dashboard-screen'
-import { OnboardingScreen, isOnboardingComplete } from '@/presentation/screens/onboarding-screen'
+import { OnboardingScreen } from '@/presentation/screens/onboarding-screen'
 import { TabBar, type AppTab } from '@/presentation/components/tab-bar/tab-bar'
 
 export default function HomeScreen() {
-  const { storageGateway } = useContainer()
-  const [ready, setReady] = useState(() => isOnboardingComplete(storageGateway))
+  const [ready, setReady] = useState(false) // always show onboarding — demo app
   const [activeTab, setActiveTab] = useState<AppTab>('globe')
 
   if (!ready) {
