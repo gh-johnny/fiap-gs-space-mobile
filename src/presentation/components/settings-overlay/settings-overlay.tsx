@@ -26,7 +26,13 @@ const icon = StyleSheet.create({
 
 export function SettingsOverlay() {
   const [open, setOpen] = useState(false)
-  const { simpleMode, toggleSimpleMode, globeMode, setGlobeMode, locale, toggleLocale } = useUIStore()
+  const {
+    simpleMode, toggleSimpleMode,
+    globeMode, setGlobeMode,
+    locale, toggleLocale,
+    notificationsEnabled, toggleNotifications,
+    locationEnabled, toggleLocation,
+  } = useUIStore()
   const t = useTranslation()
 
   return (
@@ -112,6 +118,54 @@ export function SettingsOverlay() {
               >
                 <Text style={[styles.optText, locale === 'en' && styles.optTextActive]}>
                   🇬🇧 EN
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>{t('settings.notifications')}</Text>
+            <View style={styles.group}>
+              <TouchableOpacity
+                style={[styles.opt, notificationsEnabled && styles.optActive]}
+                onPress={() => { if (!notificationsEnabled) toggleNotifications() }}
+              >
+                <Text style={[styles.optText, notificationsEnabled && styles.optTextActive]}>
+                  {t('settings.on')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.opt, !notificationsEnabled && styles.optActive]}
+                onPress={() => { if (notificationsEnabled) toggleNotifications() }}
+              >
+                <Text style={[styles.optText, !notificationsEnabled && styles.optTextActive]}>
+                  {t('settings.off')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>{t('settings.location')}</Text>
+            <View style={styles.group}>
+              <TouchableOpacity
+                style={[styles.opt, locationEnabled && styles.optActive]}
+                onPress={() => { if (!locationEnabled) toggleLocation() }}
+              >
+                <Text style={[styles.optText, locationEnabled && styles.optTextActive]}>
+                  {t('settings.on')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.opt, !locationEnabled && styles.optActive]}
+                onPress={() => { if (locationEnabled) toggleLocation() }}
+              >
+                <Text style={[styles.optText, !locationEnabled && styles.optTextActive]}>
+                  {t('settings.off')}
                 </Text>
               </TouchableOpacity>
             </View>

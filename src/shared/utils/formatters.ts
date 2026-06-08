@@ -1,4 +1,4 @@
-import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach } from '@/domain/value-objects'
+import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach } from '@/core/value-objects'
 
 export function formatPc(pc: ProbabilityOfCollision): string {
   return pc.toScientificNotation()

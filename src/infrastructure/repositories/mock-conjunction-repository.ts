@@ -1,5 +1,5 @@
-import { IConjunctionRepository } from '@/domain/repositories/i-conjunction-repository'
-import { ConjunctionEvent, SatelliteObject, SatelliteObjectType } from '@/domain/entities'
+import { IConjunctionRepository } from '@/core/repositories/i-conjunction-repository'
+import { ConjunctionEvent, SatelliteObject, SatelliteObjectType } from '@/core/entities'
 import {
   NoradId,
   TLEData,
@@ -7,16 +7,23 @@ import {
   MissDistance,
   TimeToClosestApproach,
   type Severity,
-} from '@/domain/value-objects'
+} from '@/core/value-objects'
 
-const L1_ISS = '1 25544U 98067A   21275.51782528  .00005745  00000-0  11227-3 0  9993'
-const L2_ISS = '2 25544  51.6441 290.5490 0003799 102.9970 332.5663 15.48862740304656'
-const L1_SL1 = '1 44713U 19074A   21275.51612742  .00000078  00000-0  24334-4 0  9993'
-const L2_SL1 = '2 44713  53.0538 344.4309 0001318  94.1468 265.9876 15.06380308 57224'
-const L1_SL2 = '1 44714U 19074B   21275.51612742  .00000082  00000-0  25891-4 0  9990'
-const L2_SL2 = '2 44714  53.0535 344.4290 0001421  95.2019 264.9219 15.06381102 57219'
-const L1_DEB = '1 36508U 09004A   21275.50000000  .00001425  00000-0  16981-3 0  9999'
-const L2_DEB = '2 36508  74.0324  12.4918 0099816  25.5987 334.8271 14.56143282672843'
+// ── Operational satellites ────────────────────────────────────────────────────
+const L1_ISS  = '1 25544U 98067A   26159.50000000  .00005745  00000-0  11227-3 0  9993'
+const L2_ISS  = '2 25544  51.6441 290.5490 0003799 102.9970 332.5663 15.48862740304656'
+const L1_HUB  = '1 20580U 90037B   26159.50000000  .00001218  00000-0  59985-4 0  9994'
+const L2_HUB  = '2 20580  28.4698  99.1284 0002783  79.7869 280.3487 15.09696086 10277'
+const L1_SL1  = '1 44713U 19074A   26159.50000000  .00000078  00000-0  24334-4 0  9993'
+const L2_SL1  = '2 44713  53.0538 344.4309 0001318  94.1468 265.9876 15.06380308 57224'
+
+// ── Uncontrollable bodies ─────────────────────────────────────────────────────
+const L1_AST1 = '1 90001U 21001A   26159.50000000  .00001000  00000-0  10000-4 0  9992'
+const L2_AST1 = '2 90001  62.3400 134.8900 0124578 310.5421  45.2318 13.70123000102345'
+const L1_DEB1 = '1 36508U 09004A   26159.50000000  .00001425  00000-0  16981-3 0  9999'
+const L2_DEB1 = '2 36508  54.0324 189.4918 0099816  25.5987 334.8271 14.56143282672843'
+const L1_DEB2 = '1 38321U 09005C   26159.50000000  .00002145  00000-0  24893-3 0  9993'
+const L2_DEB2 = '2 38321  56.4012  62.9812 0137892 156.7819 204.5371 14.49874362682914'
 
 function sat(id: number, name: string, type: SatelliteObjectType, l1: string, l2: string) {
   return SatelliteObject.create({
@@ -30,69 +37,29 @@ function sat(id: number, name: string, type: SatelliteObjectType, l1: string, l2
 const h = (hours: number) => new Date(Date.now() + hours * 3600_000)
 
 const EVENTS: ConjunctionEvent[] = [
-  // CRITICAL — ISS × debris
+  // CRITICAL — ISS × APOPHIS-2029
   ConjunctionEvent.create({
     objectA: sat(25544, 'ISS (ZARYA)', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_ISS, L2_ISS),
-    objectB: sat(36508, 'COSMOS 2251 DEB', SatelliteObjectType.DEBRIS, L1_DEB, L2_DEB),
+    objectB: sat(90001, 'APOPHIS-2029', SatelliteObjectType.ASTEROID, L1_AST1, L2_AST1),
     pc: ProbabilityOfCollision.create(5e-4),
-    missDistance: MissDistance.create(420),
+    missDistance: MissDistance.create(380),
     tcpa: TimeToClosestApproach.create(h(2)),
   }),
-  // CRITICAL — Starlink × polar debris
+  // WARNING — Hubble × COSMOS 2251 DEB
   ConjunctionEvent.create({
-    objectA: sat(49260, 'STARLINK-2150', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_SL1, L2_SL1),
-    objectB: sat(40271, 'FENGYUN 1C DEB', SatelliteObjectType.DEBRIS, L1_DEB, L2_DEB),
-    pc: ProbabilityOfCollision.create(3e-4),
-    missDistance: MissDistance.create(280),
-    tcpa: TimeToClosestApproach.create(h(3)),
-  }),
-  // CRITICAL — Hubble × debris (different region)
-  ConjunctionEvent.create({
-    objectA: sat(20580, 'HUBBLE', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_ISS, L2_ISS),
-    objectB: sat(38321, 'IRIDIUM 33 DEB', SatelliteObjectType.DEBRIS, L1_DEB, L2_DEB),
-    pc: ProbabilityOfCollision.create(2e-4),
-    missDistance: MissDistance.create(560),
-    tcpa: TimeToClosestApproach.create(h(4)),
-  }),
-  // WARNING — Starlink constellation pair
-  ConjunctionEvent.create({
-    objectA: sat(44713, 'STARLINK-1007', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_SL1, L2_SL1),
-    objectB: sat(44714, 'STARLINK-1008', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_SL2, L2_SL2),
-    pc: ProbabilityOfCollision.create(5e-5),
-    missDistance: MissDistance.create(2800),
-    tcpa: TimeToClosestApproach.create(h(6)),
-  }),
-  // WARNING — Terra × debris (polar orbit)
-  ConjunctionEvent.create({
-    objectA: sat(27424, 'TERRA', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_DEB, L2_DEB),
-    objectB: sat(36508, 'COSMOS 2251 DEB', SatelliteObjectType.DEBRIS, L1_DEB, L2_DEB),
+    objectA: sat(20580, 'HUBBLE', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_HUB, L2_HUB),
+    objectB: sat(36508, 'COSMOS 2251 DEB', SatelliteObjectType.DEBRIS, L1_DEB1, L2_DEB1),
     pc: ProbabilityOfCollision.create(6e-5),
-    missDistance: MissDistance.create(1500),
+    missDistance: MissDistance.create(1400),
     tcpa: TimeToClosestApproach.create(h(5)),
   }),
-  // WARNING — Jason-3 × Starlink
+  // INFO — Starlink-1007 × IRIDIUM 33 DEB
   ConjunctionEvent.create({
-    objectA: sat(41240, 'JASON-3', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_ISS, L2_ISS),
-    objectB: sat(44730, 'STARLINK-1024', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_SL2, L2_SL2),
-    pc: ProbabilityOfCollision.create(2e-5),
-    missDistance: MissDistance.create(4200),
-    tcpa: TimeToClosestApproach.create(h(9)),
-  }),
-  // INFO — Sentinel × Starlink
-  ConjunctionEvent.create({
-    objectA: sat(41335, 'SENTINEL-2A', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_DEB, L2_DEB),
-    objectB: sat(49261, 'STARLINK-2151', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_SL1, L2_SL1),
-    pc: ProbabilityOfCollision.create(3e-6),
-    missDistance: MissDistance.create(12000),
-    tcpa: TimeToClosestApproach.create(h(14)),
-  }),
-  // INFO — OneWeb × Starlink (different orbital plane)
-  ConjunctionEvent.create({
-    objectA: sat(45016, 'ONEWEB-0012', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_SL2, L2_SL2),
-    objectB: sat(44731, 'STARLINK-1025', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_SL1, L2_SL1),
-    pc: ProbabilityOfCollision.create(5e-7),
-    missDistance: MissDistance.create(30000),
-    tcpa: TimeToClosestApproach.create(h(20)),
+    objectA: sat(44713, 'STARLINK-1007', SatelliteObjectType.OPERATIONAL_SATELLITE, L1_SL1, L2_SL1),
+    objectB: sat(38321, 'IRIDIUM 33 DEB', SatelliteObjectType.DEBRIS, L1_DEB2, L2_DEB2),
+    pc: ProbabilityOfCollision.create(5e-6),
+    missDistance: MissDistance.create(11000),
+    tcpa: TimeToClosestApproach.create(h(15)),
   }),
 ]
 

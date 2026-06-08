@@ -1,4 +1,4 @@
-import { TLEData } from '@/domain/value-objects'
+import { TLEData } from '@/core/value-objects'
 import { OrbitPosition } from './propagate-orbits'
 
 export interface ISatelliteJsAdapter {

@@ -1,6 +1,6 @@
 import React from 'react'
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native'
-import { ConjunctionEvent } from '@/domain/entities'
+import { ConjunctionEvent } from '@/core/entities'
 import { SEVERITY_COLORS } from '@/constants/theme'
 import { useTranslation } from '@/i18n/use-translation'
 

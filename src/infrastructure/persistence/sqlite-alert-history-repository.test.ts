@@ -1,15 +1,15 @@
 import { SqliteAlertHistoryRepository } from './sqlite-alert-history-repository'
 import { SqliteService } from './sqlite-service'
-import { OrbitalAlert } from '@/domain/entities/orbital-alert'
-import { ConjunctionEvent } from '@/domain/entities/conjunction-event'
-import { SatelliteObject, SatelliteObjectType } from '@/domain/entities/satellite-object'
+import { OrbitalAlert } from '@/core/entities/orbital-alert'
+import { ConjunctionEvent } from '@/core/entities/conjunction-event'
+import { SatelliteObject, SatelliteObjectType } from '@/core/entities/satellite-object'
 import {
   NoradId,
   TLEData,
   ProbabilityOfCollision,
   MissDistance,
   TimeToClosestApproach,
-} from '@/domain/value-objects'
+} from '@/core/value-objects'
 import type { SqliteAlertRowExternal } from './sqlite-external-types'
 
 const L1 = '1 25544U 98067A   21275.51782528  .00005745  00000-0  11227-3 0  9993'

@@ -1,5 +1,5 @@
 import { SatelliteJsAdapter } from './satellite-js-adapter'
-import { TLEData, NoradId } from '@/domain/value-objects'
+import { TLEData, NoradId } from '@/core/value-objects'
 
 // TLE real da ISS (ZARYA) — dados históricos válidos para propagação
 const ISS_LINE1 = '1 25544U 98067A   21275.51782528  .00005745  00000-0  11227-3 0  9993'

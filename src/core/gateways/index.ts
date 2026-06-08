@@ -1,3 +1,5 @@
 export type { ITleGateway } from './i-tle-gateway'
 export type { IStorageGateway } from './i-storage-gateway'
 export type { IHapticsGateway } from './i-haptics-gateway'
+export type { ILocationGateway, UserLocation } from './i-location-gateway'
+export type { INotificationGateway } from './i-notification-gateway'

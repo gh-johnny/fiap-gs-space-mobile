@@ -1,7 +1,7 @@
 import { twoline2satrec, propagate, eciToGeodetic, gstime } from 'satellite.js'
-import { TLEData, NoradId } from '@/domain/value-objects'
-import { ISatelliteJsAdapter } from '@/domain/usecases/i-satellite-js-adapter'
-import { OrbitPosition } from '@/domain/usecases/propagate-orbits'
+import { TLEData, NoradId } from '@/core/value-objects'
+import { ISatelliteJsAdapter } from '@/core/usecases/i-satellite-js-adapter'
+import { OrbitPosition } from '@/core/usecases/propagate-orbits'
 import type {
   SatRecExternal,
   EciVec3External,

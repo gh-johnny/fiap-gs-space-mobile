@@ -10,6 +10,10 @@ const en = {
   'settings.technical': 'TEC',
   'settings.simple': 'SIM',
   'settings.language': 'Language',
+  'settings.notifications': 'Alerts',
+  'settings.location': 'Beacon',
+  'settings.on': 'ON',
+  'settings.off': 'OFF',
 
   // Globe screen
   'globe.conjunctions': 'CONJUNCTIONS',
@@ -94,7 +98,9 @@ const en = {
   'sat.typeOperational': 'OPERATIONAL',
   'sat.typeDebris': 'DEBRIS',
   'sat.typeRocket': 'ORBITAL STAGE',
+  'sat.typeAsteroid': 'ASTEROID',
   'sat.fragmentLabel': 'UNCONTROLLED FRAGMENT',
+  'sat.asteroidLabel': 'NATURAL BODY · NO CONTROL',
   'sat.propellant': 'PROPELLANT',
   'sat.opMode': 'OPERATING MODE',
   'sat.systems': 'SYSTEMS',
@@ -106,6 +112,9 @@ const en = {
   'sat.phase2': 'Δv +0.3 m/s APPLIED',
   'sat.executeCorrection': 'EXECUTE ORBITAL CORRECTION',
   'sat.commsOffline': 'SILENCE',
+  'sat.cameraValue': 'OPTICAL · STANDBY',
+  'sat.observationalData': 'OBSERVATIONAL DATA',
+  'sat.uncontrolledInfo': 'No control interface available for this object. Trajectory tracking only.',
 } as const
 
 const pt: typeof en = {
@@ -118,6 +127,10 @@ const pt: typeof en = {
   'settings.technical': 'TÉC',
   'settings.simple': 'SIM',
   'settings.language': 'Idioma',
+  'settings.notifications': 'Alertas',
+  'settings.location': 'Beacon',
+  'settings.on': 'ON',
+  'settings.off': 'OFF',
 
   // Globe screen
   'globe.conjunctions': 'CONJUNÇÕES',
@@ -202,7 +215,9 @@ const pt: typeof en = {
   'sat.typeOperational': 'OPERACIONAL',
   'sat.typeDebris': 'DETRITO',
   'sat.typeRocket': 'ESTÁGIO ORBITAL',
+  'sat.typeAsteroid': 'ASTEROIDE',
   'sat.fragmentLabel': 'FRAGMENTO NÃO CONTROLADO',
+  'sat.asteroidLabel': 'CORPO NATURAL · SEM CONTROLE',
   'sat.propellant': 'PROPELENTE',
   'sat.opMode': 'MODO DE OPERAÇÃO',
   'sat.systems': 'SISTEMAS',
@@ -214,6 +229,9 @@ const pt: typeof en = {
   'sat.phase2': 'Δv +0.3 m/s APLICADO',
   'sat.executeCorrection': 'EXECUTAR CORREÇÃO ORBITAL',
   'sat.commsOffline': 'SILÊNCIO',
+  'sat.cameraValue': 'ÓPTICA · STANDBY',
+  'sat.observationalData': 'DADOS OBSERVACIONAIS',
+  'sat.uncontrolledInfo': 'Nenhuma interface de controle disponível para este objeto. Somente rastreamento de trajetória.',
 }
 
 export const TRANSLATIONS: Record<Locale, typeof en> = { en, pt }

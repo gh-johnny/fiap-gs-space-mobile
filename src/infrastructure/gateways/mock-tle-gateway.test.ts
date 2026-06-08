@@ -1,5 +1,5 @@
 import { MockTleGateway } from './mock-tle-gateway'
-import { SatelliteObjectType } from '@/domain/entities'
+import { SatelliteObjectType } from '@/core/entities'
 
 describe('MockTleGateway', () => {
   const sut = new MockTleGateway()

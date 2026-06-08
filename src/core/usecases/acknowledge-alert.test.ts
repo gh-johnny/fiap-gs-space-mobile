@@ -1,16 +1,16 @@
 import { AcknowledgeAlert } from './acknowledge-alert'
-import { OrbitalAlert } from '@/domain/entities/orbital-alert'
-import { ConjunctionEvent } from '@/domain/entities/conjunction-event'
-import { SatelliteObject, SatelliteObjectType } from '@/domain/entities/satellite-object'
+import { OrbitalAlert } from '@/core/entities/orbital-alert'
+import { ConjunctionEvent } from '@/core/entities/conjunction-event'
+import { SatelliteObject, SatelliteObjectType } from '@/core/entities/satellite-object'
 import {
   NoradId,
   TLEData,
   ProbabilityOfCollision,
   MissDistance,
   TimeToClosestApproach,
-} from '@/domain/value-objects'
-import { IStorageGateway } from '@/domain/gateways/i-storage-gateway'
-import { IAlertHistoryRepository } from '@/domain/repositories/i-alert-history-repository'
+} from '@/core/value-objects'
+import { IStorageGateway } from '@/core/gateways/i-storage-gateway'
+import { IAlertHistoryRepository } from '@/core/repositories/i-alert-history-repository'
 
 const L1 = '1 44713U 19074A   20325.51612742  .00000078  00000-0  24334-4 0  9993'
 const L2 = '2 44713  53.0538 344.4309 0001318  94.1468 265.9876 15.06380308 57224'

@@ -1,6 +1,6 @@
 import { ClassifyRisk } from './classify-risk'
-import { ProbabilityOfCollision } from '@/domain/value-objects/probability-of-collision'
-import { MissDistance } from '@/domain/value-objects/miss-distance'
+import { ProbabilityOfCollision } from '@/core/value-objects/probability-of-collision'
+import { MissDistance } from '@/core/value-objects/miss-distance'
 
 describe('ClassifyRisk', () => {
   const sut = new ClassifyRisk()

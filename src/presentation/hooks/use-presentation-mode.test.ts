@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native'
 import { usePresentationMode } from './use-presentation-mode'
-import { IStorageGateway } from '@/domain/gateways/i-storage-gateway'
+import { IStorageGateway } from '@/core/gateways/i-storage-gateway'
 
 function makeStorage(initial: boolean | null = null): jest.Mocked<IStorageGateway> {
   return {

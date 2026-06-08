@@ -13,6 +13,10 @@ interface UIState {
   setGlobeMode: (mode: 'light' | 'dark') => void
   locale: Locale
   toggleLocale: () => void
+  notificationsEnabled: boolean
+  toggleNotifications: () => void
+  locationEnabled: boolean
+  toggleLocation: () => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -22,4 +26,8 @@ export const useUIStore = create<UIState>((set) => ({
   setGlobeMode: (mode) => set({ globeMode: mode }),
   locale: 'pt',
   toggleLocale: () => set((s) => ({ locale: s.locale === 'pt' ? 'en' : 'pt' })),
+  notificationsEnabled: true,
+  toggleNotifications: () => set((s) => ({ notificationsEnabled: !s.notificationsEnabled })),
+  locationEnabled: true,
+  toggleLocation: () => set((s) => ({ locationEnabled: !s.locationEnabled })),
 }))

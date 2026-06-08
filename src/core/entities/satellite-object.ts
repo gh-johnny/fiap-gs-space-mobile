@@ -1,9 +1,10 @@
-import { NoradId, TLEData } from '@/domain/value-objects'
+import { NoradId, TLEData } from '@/core/value-objects'
 
 export enum SatelliteObjectType {
   OPERATIONAL_SATELLITE = 'OPERATIONAL_SATELLITE',
   DEBRIS = 'DEBRIS',
   ROCKET_BODY = 'ROCKET_BODY',
+  ASTEROID = 'ASTEROID',
 }
 
 export class SatelliteObject {
@@ -24,5 +25,9 @@ export class SatelliteObject {
       throw new Error('SatelliteObject requer um nome não vazio')
     }
     return new SatelliteObject(params.noradId, params.name, params.type, params.tleData)
+  }
+
+  isControllable(): boolean {
+    return this.type === SatelliteObjectType.OPERATIONAL_SATELLITE
   }
 }

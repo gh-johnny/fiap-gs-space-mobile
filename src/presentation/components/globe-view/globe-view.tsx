@@ -10,14 +10,20 @@ const globeSource = Image.resolveAssetSource(require('./globe.html'))
 
 interface GlobeViewProps {
   onSatelliteTap?: (noradId: string) => void
+  onSatCardClose?: () => void
+  onSatCardOpenSheet?: () => void
   onReady?: () => void
 }
 
-export const GlobeView = forwardRef<IGlobeGlAdapter, GlobeViewProps>(({ onSatelliteTap, onReady }, ref) => {
+export const GlobeView = forwardRef<IGlobeGlAdapter, GlobeViewProps>(({ onSatelliteTap, onSatCardClose, onSatCardOpenSheet, onReady }, ref) => {
   const webViewRef = useRef<WebView>(null)
   const adapter = useRef(new GlobeGlAdapter(webViewRef))
-  const onSatelliteTapRef = useRef(onSatelliteTap)
-  onSatelliteTapRef.current = onSatelliteTap
+  const onSatelliteTapRef    = useRef(onSatelliteTap)
+  const onSatCardCloseRef    = useRef(onSatCardClose)
+  const onSatCardOpenSheetRef = useRef(onSatCardOpenSheet)
+  onSatelliteTapRef.current    = onSatelliteTap
+  onSatCardCloseRef.current    = onSatCardClose
+  onSatCardOpenSheetRef.current = onSatCardOpenSheet
 
   useImperativeHandle(ref, () => adapter.current)
 
@@ -26,6 +32,10 @@ export const GlobeView = forwardRef<IGlobeGlAdapter, GlobeViewProps>(({ onSatell
       const msg = JSON.parse(event.nativeEvent.data)
       if (msg.type === 'SATELLITE_TAPPED') {
         onSatelliteTapRef.current?.(msg.payload.noradId)
+      } else if (msg.type === 'SAT_CARD_CLOSE') {
+        onSatCardCloseRef.current?.()
+      } else if (msg.type === 'SAT_CARD_OPEN_SHEET') {
+        onSatCardOpenSheetRef.current?.()
       }
     } catch (_) {}
   }

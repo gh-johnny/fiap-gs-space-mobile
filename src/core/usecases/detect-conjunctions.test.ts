@@ -1,5 +1,5 @@
-import { NoradId, TLEData } from '@/domain/value-objects'
-import { SatelliteObject, SatelliteObjectType } from '@/domain/entities'
+import { NoradId, TLEData } from '@/core/value-objects'
+import { SatelliteObject, SatelliteObjectType } from '@/core/entities'
 import { DetectConjunctions } from './detect-conjunctions'
 import { OrbitPosition } from './propagate-orbits'
 

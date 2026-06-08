@@ -1,6 +1,6 @@
-import { OrbitalAlert } from '@/domain/entities/orbital-alert'
-import { IStorageGateway } from '@/domain/gateways/i-storage-gateway'
-import { IAlertHistoryRepository } from '@/domain/repositories/i-alert-history-repository'
+import { OrbitalAlert } from '@/core/entities/orbital-alert'
+import { IStorageGateway } from '@/core/gateways/i-storage-gateway'
+import { IAlertHistoryRepository } from '@/core/repositories/i-alert-history-repository'
 
 export class AcknowledgeAlert {
   constructor(

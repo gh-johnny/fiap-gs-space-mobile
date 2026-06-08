@@ -1,16 +1,16 @@
 import { act, renderHook } from '@testing-library/react-native'
 import { useAlertStore } from './use-alert-store'
-import { ConjunctionEvent, OrbitalAlert, SatelliteObject, SatelliteObjectType } from '@/domain/entities'
+import { ConjunctionEvent, OrbitalAlert, SatelliteObject, SatelliteObjectType } from '@/core/entities'
 import {
   NoradId,
   TLEData,
   ProbabilityOfCollision,
   MissDistance,
   TimeToClosestApproach,
-} from '@/domain/value-objects'
-import { IConjunctionRepository } from '@/domain/repositories/i-conjunction-repository'
-import { IAlertHistoryRepository } from '@/domain/repositories/i-alert-history-repository'
-import { AcknowledgeAlert } from '@/domain/usecases/acknowledge-alert'
+} from '@/core/value-objects'
+import { IConjunctionRepository } from '@/core/repositories/i-conjunction-repository'
+import { IAlertHistoryRepository } from '@/core/repositories/i-alert-history-repository'
+import { AcknowledgeAlert } from '@/core/usecases/acknowledge-alert'
 
 const L1 = '1 25544U 98067A   21275.51782528  .00005745  00000-0  11227-3 0  9993'
 const L2 = '2 25544  51.6441 290.5490 0003799 102.9970 332.5663 15.48862740304656'

@@ -30,6 +30,13 @@ export const SEVERITY_COLORS = {
   INFO:     '#FFD60A',
 } as const
 
+export const OBJECT_TYPE_COLORS: Record<string, string> = {
+  OPERATIONAL_SATELLITE: '#00E5FF',
+  DEBRIS:                '#8E8E93',
+  ROCKET_BODY:           '#FF6B35',
+  ASTEROID:              '#8E8E93',
+}
+
 export const OrbitalColors = {
   background: '#000814',
 
@@ -40,8 +47,9 @@ export const OrbitalColors = {
   },
 
   satellite:       '#00E5FF',
-  debris:          '#FF9500',
+  debris:          '#8E8E93',
   rocketBody:      '#FF6B35',
+  asteroid:        '#8E8E93',
   conjunctionLine: '#FF3B30',
 
   glass: {

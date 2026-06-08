@@ -1,7 +1,7 @@
 import { MockSatelliteRepository } from './mock-satellite-repository'
-import { ITleGateway } from '@/domain/gateways/i-tle-gateway'
-import { SatelliteObject, SatelliteObjectType } from '@/domain/entities'
-import { NoradId, TLEData } from '@/domain/value-objects'
+import { ITleGateway } from '@/core/gateways/i-tle-gateway'
+import { SatelliteObject, SatelliteObjectType } from '@/core/entities'
+import { NoradId, TLEData } from '@/core/value-objects'
 
 const L1 = '1 25544U 98067A   21275.51782528  .00005745  00000-0  11227-3 0  9993'
 const L2 = '2 25544  51.6441 290.5490 0003799 102.9970 332.5663 15.48862740304656'

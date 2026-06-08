@@ -1,11 +1,12 @@
 import { create } from 'zustand'
-import { ConjunctionEvent, OrbitalAlert, SatelliteObject } from '@/domain/entities'
-import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach } from '@/domain/value-objects'
-import { IConjunctionRepository } from '@/domain/repositories/i-conjunction-repository'
-import { IAlertHistoryRepository } from '@/domain/repositories/i-alert-history-repository'
-import { AcknowledgeAlert } from '@/domain/usecases/acknowledge-alert'
+import { ConjunctionEvent, OrbitalAlert, SatelliteObject } from '@/core/entities'
+import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach } from '@/core/value-objects'
+import { IConjunctionRepository } from '@/core/repositories/i-conjunction-repository'
+import { IAlertHistoryRepository } from '@/core/repositories/i-alert-history-repository'
+import { AcknowledgeAlert } from '@/core/usecases/acknowledge-alert'
 
-const MAX_CONJUNCTIONS = 12
+const MAX_CONJUNCTIONS         = 20
+const MAX_CONJUNCTIONS_PER_BODY = 2
 
 interface AlertState {
   conjunctions: ConjunctionEvent[]
@@ -21,6 +22,7 @@ interface AlertState {
   incrementCorrected: () => void
   removeConjunction: (noradIdA: string, noradIdB: string) => void
   spawnRandomConjunction: (satellites: SatelliteObject[]) => ConjunctionEvent | null
+  seedAllConjunctions: (satellites: SatelliteObject[]) => ConjunctionEvent[]
   reset: () => void
 }
 
@@ -81,12 +83,41 @@ export const useAlertStore = create<AlertState>((set, get) => ({
     const { conjunctions } = get()
     if (satellites.length < 2 || conjunctions.length >= MAX_CONJUNCTIONS) return null
 
-    const idxA = Math.floor(Math.random() * satellites.length)
-    let idxB = Math.floor(Math.random() * (satellites.length - 1))
-    if (idxB >= idxA) idxB++
+    const controllable   = satellites.filter(s => s.isControllable())
+    const uncontrollable = satellites.filter(s => !s.isControllable())
+    if (controllable.length === 0) return null
 
-    const satA = satellites[idxA]!
-    const satB = satellites[idxB]!
+    // Count active conjunctions per body to enforce per-body cap
+    const pairCount = new Map<number, number>()
+    for (const c of conjunctions) {
+      const a = c.objectA.noradId.value
+      const b = c.objectB.noradId.value
+      pairCount.set(a, (pairCount.get(a) ?? 0) + 1)
+      pairCount.set(b, (pairCount.get(b) ?? 0) + 1)
+    }
+    const underLimit = (id: number) => (pairCount.get(id) ?? 0) < MAX_CONJUNCTIONS_PER_BODY
+
+    const eligibleA = controllable.filter(s => underLimit(s.noradId.value))
+    if (eligibleA.length === 0) return null
+
+    const satA = eligibleA[Math.floor(Math.random() * eligibleA.length)]!
+
+    // 90% chance: pair with non-controllable body (asteroid/debris)
+    // 10% chance: pair with another controllable satellite
+    let satB: SatelliteObject | undefined
+    if (uncontrollable.length > 0 && Math.random() < 0.90) {
+      const eligibleU = uncontrollable.filter(s => underLimit(s.noradId.value))
+      if (eligibleU.length > 0) {
+        satB = eligibleU[Math.floor(Math.random() * eligibleU.length)]
+      }
+    }
+    if (!satB) {
+      const eligibleC = eligibleA.filter(s => s.noradId.value !== satA.noradId.value)
+      if (eligibleC.length === 0) return null
+      satB = eligibleC[Math.floor(Math.random() * eligibleC.length)]
+    }
+    if (!satB) return null
+
     const aId = satA.noradId.value
     const bId = satB.noradId.value
 
@@ -105,6 +136,51 @@ export const useAlertStore = create<AlertState>((set, get) => ({
     })
     set({ conjunctions: [...conjunctions, event] })
     return event
+  },
+
+  seedAllConjunctions(satellites) {
+    const { conjunctions } = get()
+    const controllable   = satellites.filter(s => s.isControllable())
+    const uncontrollable = satellites.filter(s => !s.isControllable())
+    if (controllable.length === 0 || uncontrollable.length === 0) return []
+
+    const pairedIds = new Set(
+      conjunctions.flatMap(c => [c.objectA.noradId.value, c.objectB.noradId.value])
+    )
+
+    const unpaired = uncontrollable.filter(b => !pairedIds.has(b.noradId.value))
+    const toSeed: typeof unpaired = []
+
+    const seeded: ConjunctionEvent[] = []
+
+    for (const body of toSeed) {
+      const satA = controllable[Math.floor(Math.random() * controllable.length)]!
+
+      // Severity distribution: 15% CRITICAL, 35% WARNING, 50% INFO
+      const r = Math.random()
+      const pc = r < 0.15
+        ? 1e-4 + Math.random() * 4e-4
+        : r < 0.50
+          ? 1e-5 + Math.random() * 9e-5
+          : 1e-6 + Math.random() * 9e-6
+
+      const event = ConjunctionEvent.create({
+        objectA: satA,
+        objectB: body,
+        pc: ProbabilityOfCollision.create(pc),
+        missDistance: MissDistance.create(2000 + Math.random() * 18000),
+        tcpa: TimeToClosestApproach.create(new Date(Date.now() + (20 + Math.random() * 160) * 60_000)),
+      })
+
+      seeded.push(event)
+      pairedIds.add(body.noradId.value)
+    }
+
+    if (seeded.length > 0) {
+      set(s => ({ conjunctions: [...s.conjunctions, ...seeded] }))
+    }
+
+    return seeded
   },
 
   reset() {

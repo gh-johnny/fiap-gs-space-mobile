@@ -8,7 +8,7 @@ import { useUIStore } from '@/application/stores/use-ui-store'
 import { useContainer } from '@/application/container/container-context'
 import { formatPc, formatMissDistance, formatTcpa, formatWindow } from '@/presentation/utils/format-simple'
 import { useTranslation } from '@/i18n/use-translation'
-import type { Severity } from '@/domain/value-objects'
+import type { Severity } from '@/core/value-objects'
 import { SEVERITY_COLORS } from '@/constants/theme'
 
 export function AlertDetailScreen() {

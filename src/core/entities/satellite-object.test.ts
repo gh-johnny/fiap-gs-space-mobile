@@ -1,5 +1,5 @@
 import { SatelliteObject, SatelliteObjectType } from './satellite-object'
-import { NoradId, TLEData } from '@/domain/value-objects'
+import { NoradId, TLEData } from '@/core/value-objects'
 
 const VALID_LINE1 = '1 44713U 19074A   20325.51612742  .00000078  00000-0  24334-4 0  9993'
 const VALID_LINE2 = '2 44713  53.0538 344.4309 0001318  94.1468 265.9876 15.06380308 57224'

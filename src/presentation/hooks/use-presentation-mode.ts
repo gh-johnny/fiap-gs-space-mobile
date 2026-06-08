@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { IStorageGateway } from '@/domain/gateways/i-storage-gateway'
+import { IStorageGateway } from '@/core/gateways/i-storage-gateway'
 
 const STORAGE_KEY = 'presentation_mode'
 

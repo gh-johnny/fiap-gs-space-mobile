@@ -1,6 +1,6 @@
-import { ITleGateway } from '@/domain/gateways/i-tle-gateway'
-import { SatelliteObject, SatelliteObjectType } from '@/domain/entities'
-import { NoradId, TLEData } from '@/domain/value-objects'
+import { ITleGateway } from '@/core/gateways/i-tle-gateway'
+import { SatelliteObject, SatelliteObjectType } from '@/core/entities'
+import { NoradId, TLEData } from '@/core/value-objects'
 import type { TleRecordExternal } from './tle-record-external'
 import tlesJson from '@/data/tles.json'
 
@@ -8,6 +8,7 @@ const TYPE_MAP: Record<string, SatelliteObjectType> = {
   OPERATIONAL_SATELLITE: SatelliteObjectType.OPERATIONAL_SATELLITE,
   DEBRIS: SatelliteObjectType.DEBRIS,
   ROCKET_BODY: SatelliteObjectType.ROCKET_BODY,
+  ASTEROID: SatelliteObjectType.ASTEROID,
 }
 
 export class MockTleGateway implements ITleGateway {

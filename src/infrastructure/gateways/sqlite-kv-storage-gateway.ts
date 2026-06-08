@@ -1,4 +1,4 @@
-import { IStorageGateway } from '@/domain/gateways/i-storage-gateway'
+import { IStorageGateway } from '@/core/gateways/i-storage-gateway'
 import { SqliteService } from '@/infrastructure/persistence/sqlite-service'
 
 export class SqliteKvStorageGateway implements IStorageGateway {

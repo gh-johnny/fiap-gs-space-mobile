@@ -1,5 +1,5 @@
-import { ConjunctionEvent } from '@/domain/entities'
-import { type Severity } from '@/domain/value-objects'
+import { ConjunctionEvent } from '@/core/entities'
+import { type Severity } from '@/core/value-objects'
 
 export interface IConjunctionRepository {
   findAll(): Promise<ConjunctionEvent[]>

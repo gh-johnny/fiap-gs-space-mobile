@@ -1,6 +1,6 @@
-import type { ProbabilityOfCollision } from '@/domain/value-objects/probability-of-collision'
-import type { MissDistance } from '@/domain/value-objects/miss-distance'
-import type { TimeToClosestApproach } from '@/domain/value-objects/time-to-closest-approach'
+import type { ProbabilityOfCollision } from '@/core/value-objects/probability-of-collision'
+import type { MissDistance } from '@/core/value-objects/miss-distance'
+import type { TimeToClosestApproach } from '@/core/value-objects/time-to-closest-approach'
 import { TRANSLATIONS, type Locale } from '@/i18n/translations'
 
 export function formatPc(pc: ProbabilityOfCollision, simple: boolean, locale: Locale = 'pt'): string {

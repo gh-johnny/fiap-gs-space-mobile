@@ -1,4 +1,4 @@
-import { ProbabilityOfCollision, MissDistance, type Severity } from '@/domain/value-objects'
+import { ProbabilityOfCollision, MissDistance, type Severity } from '@/core/value-objects'
 
 export class ClassifyRisk {
   execute(pc: ProbabilityOfCollision, miss: MissDistance): Severity {

@@ -1,5 +1,5 @@
 import { formatPc, formatDistance, formatTcpa } from './formatters'
-import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach } from '@/domain/value-objects'
+import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach } from '@/core/value-objects'
 
 describe('formatters', () => {
   describe('formatPc', () => {

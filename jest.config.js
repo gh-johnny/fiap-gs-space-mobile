@@ -16,8 +16,8 @@ module.exports = {
     'src/infrastructure/adapters/.*-external-types\\.ts',
     'src/infrastructure/gateways/.*-external\\.ts',
     'src/infrastructure/persistence/.*-external-types\\.ts',
-    'src/domain/repositories/i-.*\\.ts',
-    'src/domain/gateways/i-.*\\.ts',
+    'src/core/repositories/i-.*\\.ts',
+    'src/core/gateways/i-.*\\.ts',
     'src/infrastructure/adapters/i-.*\\.ts',
     '/index\\.ts$',
   ],
@@ -25,7 +25,7 @@ module.exports = {
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|satellite\\.js)',
   ],
   moduleNameMapper: {
-    '^satellite\\.js$': '<rootDir>/node_modules/satellite.js/dist/index.js',
+    '^satellite\\.js$': '<rootDir>/node_modules/satellite.js/lib/index.js',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 }

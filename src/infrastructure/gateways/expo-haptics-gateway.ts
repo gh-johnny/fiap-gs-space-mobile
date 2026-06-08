@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics'
-import { IHapticsGateway } from '@/domain/gateways/i-haptics-gateway'
+import { IHapticsGateway } from '@/core/gateways/i-haptics-gateway'
 
 export class ExpoHapticsGateway implements IHapticsGateway {
   async warn(): Promise<void> {

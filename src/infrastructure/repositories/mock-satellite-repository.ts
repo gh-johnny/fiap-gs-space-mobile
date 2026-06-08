@@ -1,6 +1,6 @@
-import { ISatelliteRepository } from '@/domain/repositories/i-satellite-repository'
-import { ITleGateway } from '@/domain/gateways/i-tle-gateway'
-import { SatelliteObject } from '@/domain/entities'
+import { ISatelliteRepository } from '@/core/repositories/i-satellite-repository'
+import { ITleGateway } from '@/core/gateways/i-tle-gateway'
+import { SatelliteObject } from '@/core/entities'
 
 export class MockSatelliteRepository implements ISatelliteRepository {
   constructor(private readonly tleGateway: ITleGateway) {}

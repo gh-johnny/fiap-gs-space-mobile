@@ -1,5 +1,5 @@
-import { NoradId } from '@/domain/value-objects'
-import { SatelliteObject } from '@/domain/entities'
+import { NoradId } from '@/core/value-objects'
+import { SatelliteObject } from '@/core/entities'
 import { ISatelliteJsAdapter } from './i-satellite-js-adapter'
 
 export interface OrbitPosition {
@@ -7,6 +7,7 @@ export interface OrbitPosition {
   lat: number
   lng: number
   alt: number
+  satType?: string
 }
 
 export class PropagateOrbits {
@@ -18,7 +19,7 @@ export class PropagateOrbits {
     for (const satellite of satellites) {
       const position = this.adapter.propagate(satellite.tleData, timestamp)
       if (position !== null) {
-        positions.push(position)
+        positions.push({ ...position, satType: satellite.type })
       }
     }
 

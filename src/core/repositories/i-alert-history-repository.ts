@@ -1,4 +1,4 @@
-import { OrbitalAlert, type AlertStatus } from '@/domain/entities'
+import { OrbitalAlert, type AlertStatus } from '@/core/entities'
 
 export interface IAlertHistoryRepository {
   save(alert: OrbitalAlert): Promise<void>

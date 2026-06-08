@@ -1,5 +1,5 @@
 import { MMKV } from 'react-native-mmkv'
-import { IStorageGateway } from '@/domain/gateways/i-storage-gateway'
+import { IStorageGateway } from '@/core/gateways/i-storage-gateway'
 
 const storage = new MMKV({ id: 'orbital-guardian' })
 

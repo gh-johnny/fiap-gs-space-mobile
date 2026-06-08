@@ -1,5 +1,5 @@
-import { NoradId, TLEData } from '@/domain/value-objects'
-import { SatelliteObject, SatelliteObjectType } from '@/domain/entities'
+import { NoradId, TLEData } from '@/core/value-objects'
+import { SatelliteObject, SatelliteObjectType } from '@/core/entities'
 import { PropagateOrbits, OrbitPosition } from './propagate-orbits'
 import { ISatelliteJsAdapter } from './i-satellite-js-adapter'
 
@@ -64,7 +64,7 @@ describe('PropagateOrbits', () => {
     const result = useCase.execute([sat1, sat2], refDate)
 
     expect(result).toHaveLength(1)
-    expect(result[0]).toBe(pos1)
+    expect(result[0]).toMatchObject(pos1)
   })
 
   it('retorna array vazio quando todos os adapters retornam null', () => {

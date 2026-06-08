@@ -10,7 +10,7 @@ import { SatelliteControlSheet } from '@/presentation/components/satellite-contr
 import { IGlobeGlAdapter } from '@/infrastructure/adapters/i-globe-gl-adapter'
 import { useOrbitalStore } from '@/application/stores/use-orbital-store'
 import { useAlertStore } from '@/application/stores/use-alert-store'
-import { SEVERITY_COLORS } from '@/constants/theme'
+import { SEVERITY_COLORS, OBJECT_TYPE_COLORS } from '@/constants/theme'
 import { useUIStore } from '@/application/stores/use-ui-store'
 import { useOrbitalLoop } from '@/presentation/hooks/use-orbital-loop'
 import { useHiddenTrigger } from '@/presentation/hooks/use-hidden-trigger'
@@ -26,9 +26,11 @@ export function GlobeScreen() {
   const globeDim = useSharedValue(0)
   const [showSheet, setShowSheet] = useState(false)
   const [selectedNoradId, setSelectedNoradId] = useState<string | null>(null)
+  const [showControlSheet, setShowControlSheet] = useState(false)
   const [sheetReady, setSheetReady] = useState(false)
   const [correctedNoradIds, setCorrectedNoradIds] = useState<Set<string>>(new Set())
   const arcsInitialized = useRef(false)
+  const lastBeaconPosition = useRef<{ lat: number; lng: number } | null>(null)
 
   const {
     propagateOrbits,
@@ -37,11 +39,13 @@ export function GlobeScreen() {
     alertHistoryRepository,
     acknowledgeAlert,
     hapticsGateway,
+    locationGateway,
+    notificationGateway,
   } = useContainer()
 
   const { positions, loadSatellites, propagatePositions } = useOrbitalStore()
-  const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlertFor, acknowledgeCurrentAlert, dismissAlert, incrementCorrected } = useAlertStore()
-  const { globeMode, simpleMode } = useUIStore()
+  const { conjunctions, activeAlert, loadConjunctions, loadAlertHistory, triggerAlertFor, acknowledgeCurrentAlert, dismissAlert, incrementCorrected, seedAllConjunctions } = useAlertStore()
+  const { globeMode, simpleMode, locale, notificationsEnabled, locationEnabled } = useUIStore()
 
   useEffect(() => {
     globeRef.current?.setGlobeTexture(globeMode)
@@ -51,9 +55,14 @@ export function GlobeScreen() {
     globeRef.current?.setSimpleMode(simpleMode)
   }, [simpleMode])
 
+  useEffect(() => {
+    globeRef.current?.setLocale(locale)
+  }, [locale])
+
   function handleGlobeReady() {
     globeRef.current?.setGlobeTexture(globeMode)
     globeRef.current?.setSimpleMode(simpleMode)
+    globeRef.current?.setLocale(locale)
     const { conjunctions: currentConjunctions } = useAlertStore.getState()
     if (currentConjunctions.length > 0) {
       globeRef.current?.showConjunctionPairs(currentConjunctions)
@@ -61,6 +70,9 @@ export function GlobeScreen() {
     correctedNoradIds.forEach(noradId => {
       globeRef.current?.markCorrected(Number(noradId))
     })
+    if (lastBeaconPosition.current) {
+      globeRef.current?.setUserBeacon(lastBeaconPosition.current.lat, lastBeaconPosition.current.lng)
+    }
     arcsInitialized.current = false
   }
 
@@ -73,6 +85,11 @@ export function GlobeScreen() {
     if (!current) {
       triggerAlertFor(newEvent)
       void hapticsGateway.warn()
+      void notificationGateway.scheduleConjunctionAlert(
+        newEvent.objectA.name,
+        newEvent.objectB.name,
+        newEvent.severity,
+      )
       globeDim.value = withTiming(0.5, { duration: 400 })
       globeRef.current?.dimGlobe(0.5)
       globeRef.current?.highlightConjunction(newEvent)
@@ -85,7 +102,33 @@ export function GlobeScreen() {
     void loadAlertHistory(alertHistoryRepository)
   }, [])
 
-  useEffect(() => { setSheetReady(false) }, [selectedNoradId])
+  useEffect(() => {
+    void notificationGateway.requestPermission()
+  }, [])
+
+  useEffect(() => {
+    if (!locationEnabled) {
+      locationGateway.stopWatching()
+      lastBeaconPosition.current = null
+      globeRef.current?.clearUserBeacon()
+      return
+    }
+    let active = true
+    void locationGateway.requestPermission().then((granted) => {
+      if (!granted || !active) return
+      void locationGateway.startWatching((loc) => {
+        lastBeaconPosition.current = { lat: loc.lat, lng: loc.lng }
+        globeRef.current?.setUserBeacon(loc.lat, loc.lng)
+      })
+    })
+    return () => {
+      active = false
+      locationGateway.stopWatching()
+      globeRef.current?.clearUserBeacon()
+    }
+  }, [locationEnabled])
+
+  useEffect(() => { setSheetReady(false) }, [selectedNoradId, showControlSheet])
 
   useOrbitalLoop(
     (ts) => {
@@ -97,12 +140,17 @@ export function GlobeScreen() {
       if (!arcsInitialized.current && freshPositions.length > 0) {
         const freshConjunctions = useAlertStore.getState().conjunctions
         if (freshConjunctions.length > 0) {
-          globeRef.current?.showConjunctionPairs(freshConjunctions)
+          // Seed one conjunction per uncontrollable body not yet paired
+          const { satellites } = useOrbitalStore.getState()
+          useAlertStore.getState().seedAllConjunctions(satellites)
+          // Send the full list (initial + seeded) in a single message
+          const allConjunctions = useAlertStore.getState().conjunctions
+          globeRef.current?.showConjunctionPairs(allConjunctions)
           arcsInitialized.current = true
         }
       }
 
-      if (arcsInitialized.current && Math.random() < 0.10) {
+      if (arcsInitialized.current && Math.random() < 0.02) {
         const { satellites } = useOrbitalStore.getState()
         const newEvent = useAlertStore.getState().spawnRandomConjunction(satellites)
         if (newEvent) {
@@ -111,6 +159,11 @@ export function GlobeScreen() {
           if (!current) {
             triggerAlertFor(newEvent)
             void hapticsGateway.warn()
+            if (notificationsEnabled) void notificationGateway.scheduleConjunctionAlert(
+              newEvent.objectA.name,
+              newEvent.objectB.name,
+              newEvent.severity,
+            )
             globeDim.value = withTiming(0.5, { duration: 400 })
             globeRef.current?.dimGlobe(0.5)
             globeRef.current?.highlightConjunction(newEvent)
@@ -127,18 +180,47 @@ export function GlobeScreen() {
     screenHeight: height,
   })
 
-  function handleSatelliteTap(noradId: string) {
+  function handleSatelliteTap(noradId: string, skipCard = false) {
     setSelectedNoradId(noradId)
+    setShowControlSheet(skipCard)
     globeRef.current?.dimGlobe(0.35)
     globeRef.current?.selectSatellite(Number(noradId))
-    const pos = useOrbitalStore.getState().positions.find(p => p.noradId.value === Number(noradId))
-    if (pos) globeRef.current?.focusSatellite(Number(noradId), pos.lat, pos.lng)
+    const { satellites: sats, positions: pos } = useOrbitalStore.getState()
+    const sat = sats.find(s => s.noradId.value === Number(noradId))
+    const position = pos.find(p => p.noradId.value === Number(noradId))
+    if (!skipCard) {
+      globeRef.current?.showSatCard(
+        Number(noradId),
+        sat?.name ?? `SAT-${noradId}`,
+        sat?.type ?? 'OPERATIONAL_SATELLITE',
+        position?.alt ?? 400,
+      )
+    }
+    if (skipCard && position) globeRef.current?.focusSatellite(Number(noradId), position.lat, position.lng, 0)
+  }
+
+  function handleSatCardOpenSheet() {
+    globeRef.current?.hideSatCard()
+    setShowControlSheet(true)
+    if (selectedNoradId) {
+      const { positions: pos } = useOrbitalStore.getState()
+      const position = pos.find(p => p.noradId.value === Number(selectedNoradId))
+      if (position) globeRef.current?.focusSatellite(Number(selectedNoradId), position.lat, position.lng, 0)
+    }
   }
 
   function handleControlSheetClose() {
     setSelectedNoradId(null)
+    setShowControlSheet(false)
     globeRef.current?.undimGlobe()
     globeRef.current?.deselectSatellite()
+  }
+
+  const SAT_MODE_COLORS = { NOMINAL: '#00E5FF', ECO: '#34C759', SAFE: '#FF9500' } as const
+
+  function handleSatModeChange(mode: 'NOMINAL' | 'ECO' | 'SAFE') {
+    if (!selectedNoradId) return
+    globeRef.current?.setSatMode(Number(selectedNoradId), mode, SAT_MODE_COLORS[mode])
   }
 
   function handleOrbitalCorrection() {
@@ -152,16 +234,20 @@ export function GlobeScreen() {
   const satStateColor = useCallback((noradId: string): string => {
     if (correctedNoradIds.has(noradId)) return '#34C759'
 
+    const { satellites: sats } = useOrbitalStore.getState()
+    const sat = sats.find(s => String(s.noradId.value) === noradId)
+    const defaultColor = OBJECT_TYPE_COLORS[sat?.type ?? 'OPERATIONAL_SATELLITE'] ?? '#00E5FF'
+
     const allPairs = conjunctions.filter(
       c => String(c.objectA.noradId.value) === noradId || String(c.objectB.noradId.value) === noradId,
     )
-    if (allPairs.length === 0) return '#00E5FF'
+    if (allPairs.length === 0) return defaultColor
 
     const unresolvedPairs = allPairs.filter(c =>
       !correctedNoradIds.has(String(c.objectA.noradId.value)) &&
       !correctedNoradIds.has(String(c.objectB.noradId.value)),
     )
-    if (unresolvedPairs.length === 0) return '#34C759'
+    if (unresolvedPairs.length === 0) return sat?.isControllable() ? '#34C759' : defaultColor
 
     const rank = { CRITICAL: 3, WARNING: 2, INFO: 1 } as const
     const highest = unresolvedPairs.reduce((best, c) =>
@@ -182,11 +268,7 @@ export function GlobeScreen() {
     await acknowledgeCurrentAlert(acknowledgeAlert)
     if (alert) {
       const noradId = String(alert.conjunctionEvent.objectA.noradId.value)
-      setSelectedNoradId(noradId)
-      globeRef.current?.dimGlobe(0.35)
-      globeRef.current?.selectSatellite(Number(noradId))
-      const pos = useOrbitalStore.getState().positions.find(p => p.noradId.value === Number(noradId))
-      if (pos) globeRef.current?.focusSatellite(Number(noradId), pos.lat, pos.lng)
+      handleSatelliteTap(noradId, true)
     }
   }
 
@@ -197,7 +279,13 @@ export function GlobeScreen() {
         if (!showSheet) onTap(e.nativeEvent.pageX, e.nativeEvent.pageY)
       }}
     >
-      <GlobeView ref={globeRef} onSatelliteTap={handleSatelliteTap} onReady={handleGlobeReady} />
+      <GlobeView
+        ref={globeRef}
+        onSatelliteTap={handleSatelliteTap}
+        onSatCardClose={handleControlSheetClose}
+        onSatCardOpenSheet={handleSatCardOpenSheet}
+        onReady={handleGlobeReady}
+      />
 
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.listBtn} onPress={() => setShowSheet(true)}>
@@ -220,7 +308,7 @@ export function GlobeScreen() {
         />
       )}
 
-      {activeAlert && (showSheet || (selectedNoradId && sheetReady)) && (
+      {activeAlert && (showSheet || (showControlSheet && sheetReady)) && (
         <MiniAlertBanner
           alert={activeAlert}
           onAcknowledge={() => void handleAcknowledge()}
@@ -234,12 +322,12 @@ export function GlobeScreen() {
           correctedNoradIds={correctedNoradIds}
           onOpenControlSheet={(noradId) => {
             setShowSheet(false)
-            handleSatelliteTap(noradId)
+            handleSatelliteTap(noradId, true)
           }}
         />
       )}
 
-      {selectedNoradId && (
+      {selectedNoradId && showControlSheet && (
         <SatelliteControlSheet
           key={selectedNoradId}
           noradId={selectedNoradId}
@@ -247,6 +335,7 @@ export function GlobeScreen() {
           onClose={handleControlSheetClose}
           onCorrected={handleOrbitalCorrection}
           onReady={() => setSheetReady(true)}
+          onModeChange={handleSatModeChange}
         />
       )}
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import { SatelliteObject } from '@/domain/entities'
-import { ISatelliteRepository } from '@/domain/repositories/i-satellite-repository'
-import { PropagateOrbits, type OrbitPosition } from '@/domain/usecases/propagate-orbits'
+import { SatelliteObject } from '@/core/entities'
+import { ISatelliteRepository } from '@/core/repositories/i-satellite-repository'
+import { PropagateOrbits, type OrbitPosition } from '@/core/usecases/propagate-orbits'
 
 interface OrbitalState {
   satellites: SatelliteObject[]

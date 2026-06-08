@@ -3,8 +3,8 @@ import {
   MissDistance,
   TimeToClosestApproach,
   type Severity,
-} from '@/domain/value-objects'
-import { SatelliteObject, ConjunctionEvent } from '@/domain/entities'
+} from '@/core/value-objects'
+import { SatelliteObject, ConjunctionEvent } from '@/core/entities'
 import { OrbitPosition } from './propagate-orbits'
 
 const MAX_CONJUNCTION_DISTANCE_KM = 50

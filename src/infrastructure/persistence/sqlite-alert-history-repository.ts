@@ -1,5 +1,5 @@
-import { IAlertHistoryRepository } from '@/domain/repositories/i-alert-history-repository'
-import { OrbitalAlert, ConjunctionEvent, SatelliteObject, SatelliteObjectType } from '@/domain/entities'
+import { IAlertHistoryRepository } from '@/core/repositories/i-alert-history-repository'
+import { OrbitalAlert, ConjunctionEvent, SatelliteObject, SatelliteObjectType } from '@/core/entities'
 import {
   NoradId,
   TLEData,
@@ -7,7 +7,7 @@ import {
   MissDistance,
   TimeToClosestApproach,
   type AlertStatus,
-} from '@/domain/value-objects'
+} from '@/core/value-objects'
 import { SqliteService } from './sqlite-service'
 import type { SqliteAlertRowExternal } from './sqlite-external-types'
 

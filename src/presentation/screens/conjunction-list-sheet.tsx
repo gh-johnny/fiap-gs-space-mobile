@@ -7,7 +7,7 @@ import { TAB_BAR_HEIGHT } from '@/presentation/components/tab-bar/tab-bar'
 import { ConjunctionItem } from '@/presentation/components/conjunction-item/conjunction-item'
 import { useAlertStore } from '@/application/stores/use-alert-store'
 import { useTranslation } from '@/i18n/use-translation'
-import type { ConjunctionEvent } from '@/domain/entities'
+import type { ConjunctionEvent } from '@/core/entities'
 
 interface Props {
   onClose: () => void

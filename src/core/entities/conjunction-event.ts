@@ -1,4 +1,4 @@
-import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach, type Severity } from '@/domain/value-objects'
+import { ProbabilityOfCollision, MissDistance, TimeToClosestApproach, type Severity } from '@/core/value-objects'
 import { SatelliteObject } from './satellite-object'
 
 export class ConjunctionEvent {

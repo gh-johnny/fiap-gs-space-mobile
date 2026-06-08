@@ -1,7 +1,7 @@
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native'
 import { BlurView } from 'expo-blur'
 import { useRouter } from 'expo-router'
-import { OrbitalAlert } from '@/domain/entities'
+import { OrbitalAlert } from '@/core/entities'
 import { SEVERITY_COLORS } from '@/constants/theme'
 import { useTranslation } from '@/i18n/use-translation'
 

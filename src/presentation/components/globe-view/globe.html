@@ -5,20 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Orbital Guardian Globe</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { background: #000814; overflow: hidden; width: 100vw; height: 100vh; }
     #globe { width: 100%; height: 100%; }
+    @keyframes beacon-pulse {
+      0%   { transform: scale(1);   opacity: 0.85; }
+      75%  { transform: scale(2.8); opacity: 0;    }
+      100% { transform: scale(2.8); opacity: 0;    }
+    }
     #overlay {
       position: absolute; inset: 0;
       background: rgba(0,0,0,0);
       pointer-events: none;
       transition: background 0.4s ease;
     }
+    #sat-card {
+      position: absolute;
+      width: 204px;
+      pointer-events: all;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      transform: translate(-50%, calc(-100% - 8px));
+      z-index: 10;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
   </style>
 </head>
 <body>
   <div id="globe"></div>
   <div id="overlay"></div>
+  <div id="sat-card"></div>
 
   <!-- THREE.js loaded first so window.THREE is available for our custom lines -->
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
@@ -72,8 +90,55 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
+    // ─── beacon element factory ───────────────────────────────────────────────
+    function makeBeaconElement() {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;width:28px;height:28px;transform:translate(-50%,-50%);pointer-events:none;';
+
+      var ring = document.createElement('div');
+      ring.style.cssText = [
+        'position:absolute',
+        'inset:0',
+        'border-radius:50%',
+        'border:2px solid rgba(0,229,255,0.75)',
+        'animation:beacon-pulse 2s ease-out infinite',
+      ].join(';');
+
+      var dot = document.createElement('div');
+      dot.style.cssText = [
+        'position:absolute',
+        'top:50%',
+        'left:50%',
+        'width:12px',
+        'height:12px',
+        'border-radius:50%',
+        'background:#00E5FF',
+        'box-shadow:0 0 10px #00E5FFcc,0 0 4px #fff',
+        'transform:translate(-50%,-50%)',
+      ].join(';');
+
+      var inner = document.createElement('div');
+      inner.style.cssText = [
+        'position:absolute',
+        'top:50%',
+        'left:50%',
+        'width:4px',
+        'height:4px',
+        'border-radius:50%',
+        'background:#fff',
+        'transform:translate(-50%,-50%)',
+      ].join(';');
+
+      dot.appendChild(inner);
+      wrap.appendChild(ring);
+      wrap.appendChild(dot);
+      return wrap;
+    }
+
     // ─── dot element factory ──────────────────────────────────────────────────
     function makeDotElement(d) {
+      if (d.label === 'USER_BEACON') return makeBeaconElement();
+
       var px         = Math.round(d.radius * 20);
       var glow       = Math.round(px * 2);
       var isSelected = String(d.label) === selectedNoradId;
@@ -134,47 +199,17 @@
         wrap.appendChild(arrow);
       }
 
-      // Long-press via global setTimeout — fires regardless of OrbitControls touch handling.
-      // Global timer (not per-element) survives element re-creation by renderObjects().
       wrap.addEventListener('touchstart', function(e) {
-        e.preventDefault(); // prevent browser callout/selection from firing touchcancel
-        var sid = String(d.label);
-        var _tx = e.touches[0] ? e.touches[0].clientX : 0;
-        var _ty = e.touches[0] ? e.touches[0].clientY : 0;
-        longPressDownNoradId = sid;
-        longPressDownTime    = Date.now();
-        if (longPressTimer) { clearTimeout(longPressTimer); }
-        longPressTimer = setTimeout(function() {
-          longPressTimer = null;
-          if (longPressDownNoradId !== sid) return;
-          longPressDownNoradId = null;
-          longPressOrbitNoradId = sid;
-          longPressOrbitExpiry  = Date.now() + 6000;
-          var sat = objectsData.find(function(p) { return String(p.label) === sid; });
-          if (sat && velocityAngles[sid] !== undefined) {
-            drawOrbit(sat.lat, sat.lng, sat.alt,
-              velocityAngles[sid] + (correctionAngles[sid] || 0), sat.color);
-            showLongPressTooltip(_tx, _ty, sat, velocitySpeeds[sid]);
-          }
-          document.getElementById('overlay').style.background = 'rgba(0,0,0,0.35)';
-        }, 300);
+        e.preventDefault();
+        _touchedNoradId = String(d.label);
       }, { passive: false });
 
-      function fire(e) {
+      wrap.addEventListener('touchend', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-        var sid = String(d.label);
-        if (sid !== longPressDownNoradId) return; // timer already handled it
-        longPressDownNoradId = null;
-        if (window.ReactNativeWebView) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'SATELLITE_TAPPED',
-            payload: { noradId: d.label },
-          }));
-        }
-      }
-      wrap.addEventListener('touchend', fire);
+        // Global capture touchend owns all SATELLITE_TAPPED posts via _touchedNoradId.
+        // We must NOT clear it here — global capture runs first (before this fires).
+      });
       return wrap;
     }
 
@@ -206,6 +241,21 @@
       clearTimeout(resumeTimer);
       resumeTimer = setTimeout(function () { world.controls().autoRotate = true; }, 3000);
     });
+
+    // ─── CSS3D layer reference — used to dim satellite dots when card is active ─
+    // globe.gl appends the CSS3DRenderer div as the first DIV child of #globe.
+    // filter: blur() would break CSS3D perspective, so only opacity is used here.
+    var _htmlLayer = (function() {
+      var g = document.getElementById('globe');
+      if (!g) return null;
+      for (var i = 0; i < g.children.length; i++) {
+        if (g.children[i].tagName === 'DIV') {
+          g.children[i].style.transition = 'opacity 0.22s';
+          return g.children[i];
+        }
+      }
+      return null;
+    })();
 
     // ─── custom Three.js line layer ───────────────────────────────────────────
     // Lines are added directly to globe.gl's scene, bypassing the arc layer.
@@ -301,49 +351,102 @@
       }
     }
 
-    function hideLongPressTooltip() {
-      if (longPressTooltip) { longPressTooltip.remove(); longPressTooltip = null; }
+    // ─── floating satellite card ──────────────────────────────────────────────
+    var CARD_I18N = {
+      en: {
+        typeMap: { OPERATIONAL_SATELLITE: 'OPERATIONAL', DEBRIS: 'DEBRIS', ROCKET_BODY: 'ORBITAL STAGE', ASTEROID: 'ASTEROID' },
+        details: 'DETAILS ›',
+        norad: 'NORAD',
+      },
+      pt: {
+        typeMap: { OPERATIONAL_SATELLITE: 'OPERACIONAL', DEBRIS: 'DETRITO', ROCKET_BODY: 'ESTÁGIO ORBITAL', ASTEROID: 'ASTEROIDE' },
+        details: 'DETALHES ›',
+        norad: 'NORAD',
+      },
+    };
+
+    function _esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    function _tooltipHTML(sat, speedKms) {
-      var altKm = Math.round(sat.alt * 6371);
-      var spd   = speedKms !== undefined ? speedKms.toFixed(2) + ' km/s' : '—';
-      return '<div style="color:rgba(0,229,255,0.65);font-size:9px;letter-spacing:1.5px;margin-bottom:4px">SAT ' + sat.label + '</div>' +
-             '<div>LAT <span style="color:#00E5FF">' + Number(sat.lat).toFixed(4) + '°</span></div>' +
-             '<div>LNG <span style="color:#00E5FF">' + Number(sat.lng).toFixed(4) + '°</span></div>' +
-             '<div>ALT <span style="color:#00E5FF">' + altKm + ' km</span></div>' +
-             '<div>SPD <span style="color:#00E5FF">' + spd + '</span></div>';
+    function showSatCard(data) {
+      var el = document.getElementById('sat-card');
+      if (!el) return;
+      _satCardShown = true;
+      _cardBehind   = false;
+      _lastCardData  = data;
+      pinnedCard    = { lat: data.lat, lng: data.lng, alt: data.alt };
+
+      var i18n    = CARD_I18N[locale] || CARD_I18N.en;
+      var altKm   = data.altKm;
+      var velKms  = Math.sqrt(398600 / (6371 + altKm)).toFixed(1);
+      var band    = altKm < 2000 ? 'LEO' : altKm < 35786 ? 'MEO' : 'GEO';
+      var color   = data.color;
+      var bg      = 'rgba(0,8,20,0.92)';
+      var brd     = 'rgba(255,255,255,0.12)';
+      var tLabel  = i18n.typeMap[data.satType] || i18n.typeMap.OPERATIONAL_SATELLITE;
+
+      var badgesHtml =
+        '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;border:1px solid ' + color + '44;color:' + color + ';font-size:8px;font-weight:700;letter-spacing:0.5px;">' +
+          '<span style="width:4px;height:4px;border-radius:50%;background:' + color + ';display:inline-block;flex-shrink:0;"></span>' + tLabel +
+        '</span>' +
+        (simpleMode ? '' :
+          '<span style="padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);font-size:8px;font-weight:700;letter-spacing:0.5px;">' + band + '</span>');
+
+      var metaHtml = simpleMode ? '' :
+        '<div style="color:rgba(255,255,255,0.2);font-size:8px;letter-spacing:0.8px;margin-bottom:7px;">' + i18n.norad + ' ' + data.noradId + '</div>';
+
+      var statsHtml = simpleMode
+        ? '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:7px;padding:5px 8px;margin-bottom:8px;">' +
+            '<span style="font-size:9px;"><span style="color:rgba(255,255,255,0.3);font-weight:600;">ALT </span><span id="sc-alt" style="color:' + color + ';font-weight:700;">' + Math.round(altKm) + ' km</span></span>' +
+          '</div>'
+        : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:7px;padding:5px 8px;margin-bottom:8px;">' +
+            '<span style="font-size:9px;"><span style="color:rgba(255,255,255,0.3);font-weight:600;">LAT </span><span id="sc-lat" style="color:' + color + ';font-weight:700;">' + Number(data.lat).toFixed(2) + '°</span></span>' +
+            '<span style="font-size:9px;"><span style="color:rgba(255,255,255,0.3);font-weight:600;">LNG </span><span id="sc-lng" style="color:' + color + ';font-weight:700;">' + Number(data.lng).toFixed(2) + '°</span></span>' +
+            '<span style="font-size:9px;"><span style="color:rgba(255,255,255,0.3);font-weight:600;">ALT </span><span id="sc-alt" style="color:' + color + ';font-weight:700;">' + Math.round(altKm) + ' km</span></span>' +
+            '<span style="font-size:9px;"><span style="color:rgba(255,255,255,0.3);font-weight:600;">VEL </span><span id="sc-vel" style="color:' + color + ';font-weight:700;">' + velKms + ' km/s</span></span>' +
+          '</div>';
+
+      el.innerHTML =
+        '<div style="height:3px;border-radius:3px 3px 0 0;background:' + color + ';margin-bottom:-1px;"></div>' +
+        '<div style="background:' + bg + ';border:1px solid ' + brd + ';border-top-color:' + color + '88;border-radius:0 0 12px 12px;padding:10px 12px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;margin-bottom:7px;">' +
+            '<span style="color:#fff;font-size:12px;font-weight:800;letter-spacing:-0.2px;line-height:1.3;">' + _esc(data.name) + '</span>' +
+            '<button id="sc-close" style="width:20px;height:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);font-size:9px;cursor:pointer;flex-shrink:0;padding:0;line-height:1;">✕</button>' +
+          '</div>' +
+          '<div style="display:flex;gap:4px;margin-bottom:5px;">' + badgesHtml + '</div>' +
+          metaHtml +
+          statsHtml +
+          '<button id="sc-details" style="width:100%;height:32px;border-radius:8px;border:1px solid ' + color + '44;background:rgba(255,255,255,0.03);color:' + color + ';font-size:9px;font-weight:700;letter-spacing:1px;cursor:pointer;padding:0;">' + i18n.details + '</button>' +
+        '</div>' +
+        '<div style="width:1px;height:8px;background:linear-gradient(' + color + '70,transparent);margin:0 auto;"></div>';
+
+      if (_htmlLayer) _htmlLayer.style.opacity = '0.5';
+      el.style.display    = 'block';
+      el.style.visibility = 'visible';
+      requestAnimationFrame(function() { el.style.opacity = '1'; });
+
+      var closeBtn   = document.getElementById('sc-close');
+      var detailsBtn = document.getElementById('sc-details');
+      if (closeBtn) closeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SAT_CARD_CLOSE' }));
+      });
+      if (detailsBtn) detailsBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SAT_CARD_OPEN_SHEET' }));
+      });
     }
 
-    function showLongPressTooltip(x, y, sat, speedKms) {
-      hideLongPressTooltip();
-      var tip = document.createElement('div');
-      tip.style.cssText = [
-        'position:fixed',
-        'left:'   + x + 'px',
-        'top:'    + y + 'px',
-        'transform:translate(-50%,-120%)',
-        'background:rgba(0,8,20,0.88)',
-        'border:1px solid rgba(0,229,255,0.25)',
-        'border-radius:10px',
-        'padding:10px 14px',
-        'color:#fff',
-        'font-size:11px',
-        'font-family:ui-monospace,monospace',
-        'pointer-events:none',
-        'z-index:9999',
-        'white-space:nowrap',
-        'backdrop-filter:blur(6px)',
-        '-webkit-backdrop-filter:blur(6px)',
-        'line-height:1.8',
-      ].join(';');
-      tip.innerHTML = _tooltipHTML(sat, speedKms);
-      document.body.appendChild(tip);
-      longPressTooltip = tip;
-    }
-
-    function updateLongPressTooltip(sat, speedKms) {
-      if (longPressTooltip) longPressTooltip.innerHTML = _tooltipHTML(sat, speedKms);
+    function hideSatCard() {
+      _satCardShown = false;
+      _lastCardData  = null;
+      pinnedCard    = null;
+      if (_htmlLayer) _htmlLayer.style.opacity = '';
+      var el = document.getElementById('sat-card');
+      if (!el) return;
+      el.style.opacity = '0';
+      setTimeout(function() { if (!_satCardShown) el.style.display = 'none'; }, 220);
     }
 
     // Draws a great-circle ring at the satellite's orbital altitude.
@@ -400,19 +503,26 @@
     var conjunctionPairs    = []; // all pairs ever added; never removed on correction
     var linesVisible        = false; // delayed 2 s after SET_CONJUNCTION_PAIRS to let globe settle
     var simpleMode          = false; // when true, directional arrows are hidden
+    var locale              = 'en';  // 'en' | 'pt' — synced via SET_LOCALE
     var highlightedPair     = null;
     var correctedSatellites = {}; // noradId → true when satellite is manually corrected
     var prevPositions    = {};   // noradId → {lat, lng} — previous tick
     var velocityAngles   = {};   // noradId → geographic bearing — used for drawOrbit and arrows
     var correctionAngles = {};   // noradId → ±offset degrees assigned on MARK_CORRECTED
     var correctionDrift  = {};   // noradId → {dlat, dlng} static positional nudge
-    var longPressDownNoradId  = null; // noradId of the satellite being held
-    var longPressDownTime     = 0;    // Date.now() of last touchstart on a satellite dot
-    var longPressTimer        = null; // global setTimeout handle — survives element re-creation
-    var longPressOrbitNoradId = null; // noradId whose orbit is currently shown
-    var longPressOrbitExpiry  = 0;   // Date.now() timestamp when orbit display expires
-    var velocitySpeeds        = {};  // noradId → km/s computed from consecutive position deltas
-    var longPressTooltip      = null; // DOM element of the active info tooltip
+    var velocitySpeeds  = {}; // noradId → km/s computed from consecutive position deltas
+    var activeSatModeColor = null; // non-null only for ECO/SAFE — drives orbit ring color in TÉC mode
+    var userBeaconEntry    = null; // { lat, lng, alt, label, color, radius } or null
+    var _touchedNoradId = null; // set on touchstart; cleared on touchend — survives element re-creation
+    var _tapStartX      = 0;
+    var _tapStartY      = 0;
+    var TAP_MAX_DRIFT   = 15; // px — beyond this is a drag, not a tap
+
+    // ─── satellite card state ─────────────────────────────────────────────────
+    var pinnedCard    = null;  // { lat, lng, alt } — globe-space anchor for card
+    var _satCardShown = false; // true while card should be visible
+    var _cardBehind   = false; // cached behind-globe state to avoid redundant style writes
+    var _lastCardData = null;  // last data passed to showSatCard — used to re-render on mode/locale change
 
     // ─── position interpolation ───────────────────────────────────────────────
     var interpFrom      = {};   // noradId → {lat,lng,alt} — visual position at last tick
@@ -426,14 +536,17 @@
     var trackedPosition  = null; // { lat, lng } — updated every rAF frame while tracking
     var trackingInterval = null;
 
-    function startTracking(noradId, lat, lng) {
+    var _trackingLngOffset = 0;
+
+    function startTracking(noradId, lat, lng, lngOffset) {
       clearInterval(trackingInterval);
       trackedNoradId  = String(noradId);
       trackedPosition = { lat: lat, lng: lng };
-      world.pointOfView({ lat: lat, lng: lng, altitude: 0.5 }, 300);
+      _trackingLngOffset = lngOffset || 0;
+      world.pointOfView({ lat: lat, lng: lng + _trackingLngOffset, altitude: 0.5 }, 300);
       trackingInterval = setInterval(function () {
         if (trackedPosition) {
-          world.pointOfView({ lat: trackedPosition.lat, lng: trackedPosition.lng, altitude: 0.5 }, 200);
+          world.pointOfView({ lat: trackedPosition.lat, lng: trackedPosition.lng + _trackingLngOffset, altitude: 0.5 }, 200);
         }
       }, 50);
     }
@@ -448,6 +561,8 @@
     // Returns display color for a satellite based on its unresolved conjunction pairs.
     // A pair is unresolved if NEITHER satellite in it is corrected.
     // Returns null when the satellite has no conjunction pairs at all (use default dot color).
+    // Uncontrollable bodies (DEBRIS, ASTEROID, ROCKET_BODY) are never painted — only the
+    // controllable satellite in a pair receives the severity color.
     function getActiveColor(sid) {
       if (correctedSatellites[sid]) return '#34C759';
 
@@ -456,14 +571,24 @@
       });
       if (allPairs.length === 0) return null;
 
+      // If this body is non-controllable in every pair it belongs to, keep its original color.
+      var isUncontrollable = allPairs.every(function(p) {
+        if (String(p.noradIdA) === sid) return p.satTypeA !== 'OPERATIONAL_SATELLITE';
+        return p.satTypeB !== 'OPERATIONAL_SATELLITE';
+      });
+      if (isUncontrollable) return null;
+
       var unresolvedPairs = allPairs.filter(function(p) {
         return !correctedSatellites[String(p.noradIdA)] && !correctedSatellites[String(p.noradIdB)];
       });
       if (unresolvedPairs.length === 0) return '#34C759'; // all its pairs resolved
 
-      // Highest severity among unresolved pairs
+      // Highest severity — only from pairs where this sid is the controllable side.
       var maxRank = 0, color = null;
       unresolvedPairs.forEach(function(p) {
+        var sidIsA = String(p.noradIdA) === sid;
+        var ownType = sidIsA ? p.satTypeA : p.satTypeB;
+        if (ownType !== 'OPERATIONAL_SATELLITE') return; // skip: this body is uncontrollable here
         var rank = SEVERITY_RANK[p.severity] || 1;
         if (rank > maxRank) {
           maxRank = rank;
@@ -484,7 +609,7 @@
 
     // ─── render ───────────────────────────────────────────────────────────────
     function renderObjects() {
-      world.htmlElementsData(objectsData);
+      world.htmlElementsData(userBeaconEntry ? objectsData.concat([userBeaconEntry]) : objectsData);
     }
 
     // ─── command handler ──────────────────────────────────────────────────────
@@ -526,7 +651,7 @@
             var alt       = Math.max(0.04, Math.min(p.alt * 2, 0.38));
             newTo[sid]    = { lat: lat, lng: lng, alt: alt };
             if (!newFrom[sid]) newFrom[sid] = { lat: lat, lng: lng, alt: alt }; // first tick for new satellite
-            return { lat: lat, lng: lng, alt: alt, originalColor: baseColor, color: baseColor, radius: isSel ? 1.8 : 0.3, label: sid };
+            return { lat: lat, lng: lng, alt: alt, altKm: Math.round(p.alt * 6371), originalColor: baseColor, color: baseColor, radius: isSel ? 1.8 : 0.3, label: sid };
           });
 
           interpFrom = newFrom;
@@ -539,25 +664,25 @@
           if (selectedNoradId && velocityAngles[selectedNoradId] !== undefined) {
             var orbitData = objectsData.find(function(p) { return String(p.label) === selectedNoradId; });
             if (orbitData) drawOrbit(orbitData.lat, orbitData.lng, orbitData.alt,
-              velocityAngles[selectedNoradId] + (correctionAngles[selectedNoradId] || 0), orbitData.color);
+              velocityAngles[selectedNoradId] + (correctionAngles[selectedNoradId] || 0),
+              activeSatModeColor || orbitData.color);
           }
 
-          // 6. Long-press orbit: time-based expiry (6 s), not tick-counted
-          if (longPressOrbitNoradId && longPressOrbitNoradId !== selectedNoradId) {
-            if (Date.now() < longPressOrbitExpiry) {
-              var lpSat = objectsData.find(function(p) { return String(p.label) === longPressOrbitNoradId; });
-              if (lpSat && velocityAngles[longPressOrbitNoradId] !== undefined) {
-                drawOrbit(lpSat.lat, lpSat.lng, lpSat.alt,
-                  velocityAngles[longPressOrbitNoradId] + (correctionAngles[longPressOrbitNoradId] || 0),
-                  lpSat.color);
-                updateLongPressTooltip(lpSat, velocitySpeeds[longPressOrbitNoradId]);
-              }
-            } else {
-              clearOrbit();
-              hideLongPressTooltip();
-              longPressOrbitNoradId = null;
-              if (!selectedNoradId) {
-                document.getElementById('overlay').style.background = 'rgba(0,0,0,0)';
+          // 6. Live card updates — refresh ALT (always) and LAT/LNG/VEL (technical mode)
+          if (_satCardShown && selectedNoradId) {
+            var _cUpd = objectsData.find(function(p) { return String(p.label) === selectedNoradId; });
+            if (_cUpd) {
+              if (_lastCardData) { _lastCardData.lat = _cUpd.lat; _lastCardData.lng = _cUpd.lng; _lastCardData.altKm = _cUpd.altKm; }
+              var _altEl = document.getElementById('sc-alt');
+              if (_altEl) _altEl.textContent = (_cUpd.altKm || 0) + ' km';
+              if (!simpleMode) {
+                var _latEl = document.getElementById('sc-lat');
+                var _lngEl = document.getElementById('sc-lng');
+                var _velEl = document.getElementById('sc-vel');
+                if (_latEl) _latEl.textContent = Number(_cUpd.lat).toFixed(2) + '°';
+                if (_lngEl) _lngEl.textContent = Number(_cUpd.lng).toFixed(2) + '°';
+                var _spd = velocitySpeeds[selectedNoradId];
+                if (_velEl && _spd !== undefined) _velEl.textContent = _spd.toFixed(1) + ' km/s';
               }
             }
           }
@@ -668,9 +793,6 @@
           break;
 
         case 'SELECT_SATELLITE':
-          longPressOrbitNoradId = null;
-          longPressOrbitExpiry = 0;
-          hideLongPressTooltip();
           selectedNoradId = String(msg.payload.noradId);
           objectsData = objectsData.map(function(p) {
             if (String(p.label) === selectedNoradId) {
@@ -681,13 +803,39 @@
           renderObjects();
           break;
 
+        case 'SHOW_SAT_CARD': {
+          var _cardSid = String(msg.payload.noradId);
+          var _cardDot = objectsData.find(function(p) { return String(p.label) === _cardSid; });
+          if (_cardDot) {
+            showSatCard({
+              noradId: msg.payload.noradId,
+              name:    msg.payload.name    || ('SAT-' + msg.payload.noradId),
+              satType: msg.payload.satType || 'OPERATIONAL_SATELLITE',
+              altKm:   msg.payload.altKm   || 400,
+              lat:     _cardDot.lat,
+              lng:     _cardDot.lng,
+              alt:     _cardDot.alt,
+              color:   _cardDot.color,
+            });
+            if (velocityAngles[_cardSid] !== undefined) {
+              drawOrbit(_cardDot.lat, _cardDot.lng, _cardDot.alt,
+                velocityAngles[_cardSid] + (correctionAngles[_cardSid] || 0),
+                activeSatModeColor || _cardDot.color);
+            }
+          }
+          break;
+        }
+
+        case 'HIDE_SAT_CARD':
+          hideSatCard();
+          break;
+
         case 'DESELECT_SATELLITE':
-          longPressOrbitNoradId = null;
-          longPressOrbitExpiry = 0;
-          hideLongPressTooltip();
+          hideSatCard();
           stopTracking();
           clearOrbit();
           selectedNoradId = null;
+          activeSatModeColor = null;
           objectsData = objectsData.map(function(p) {
             return Object.assign({}, p, { radius: 0.3, color: p.originalColor });
           });
@@ -695,15 +843,28 @@
           break;
 
         case 'FOCUS_SATELLITE': {
-          longPressOrbitNoradId = null;
-          longPressOrbitExpiry = 0;
-          hideLongPressTooltip();
-          startTracking(msg.payload.noradId, msg.payload.lat, msg.payload.lng);
+          startTracking(msg.payload.noradId, msg.payload.lat, msg.payload.lng, msg.payload.lngOffset || 0);
           var fSid  = String(msg.payload.noradId);
           var fData = objectsData.find(function(p) { return String(p.label) === fSid; });
           if (fData && velocityAngles[fSid] !== undefined) {
             drawOrbit(msg.payload.lat, msg.payload.lng, fData.alt,
-              velocityAngles[fSid] + (correctionAngles[fSid] || 0), fData.color);
+              velocityAngles[fSid] + (correctionAngles[fSid] || 0),
+              activeSatModeColor || fData.color);
+          }
+          break;
+        }
+
+        case 'SET_SAT_MODE': {
+          var modeSid = String(msg.payload.noradId);
+          // NOMINAL resets to satellite's natural color; ECO/SAFE use mode color
+          activeSatModeColor = msg.payload.mode !== 'NOMINAL' ? msg.payload.modeColor : null;
+          if (!simpleMode && selectedNoradId === modeSid) {
+            var mData = objectsData.find(function(p) { return String(p.label) === modeSid; });
+            if (mData && velocityAngles[modeSid] !== undefined) {
+              drawOrbit(mData.lat, mData.lng, mData.alt,
+                velocityAngles[modeSid] + (correctionAngles[modeSid] || 0),
+                activeSatModeColor || mData.color);
+            }
           }
           break;
         }
@@ -721,6 +882,30 @@
 
         case 'SET_SIMPLE_MODE':
           simpleMode = !!msg.payload.simple;
+          renderObjects();
+          if (_satCardShown && _lastCardData) showSatCard(_lastCardData);
+          break;
+
+        case 'SET_LOCALE':
+          locale = msg.payload.locale === 'pt' ? 'pt' : 'en';
+          if (_satCardShown && _lastCardData) showSatCard(_lastCardData);
+          break;
+
+        case 'SET_USER_BEACON': {
+          userBeaconEntry = {
+            lat: msg.payload.lat,
+            lng: msg.payload.lng,
+            alt: 0.0,
+            label: 'USER_BEACON',
+            color: '#00E5FF',
+            radius: 0.3,
+          };
+          renderObjects();
+          break;
+        }
+
+        case 'CLEAR_USER_BEACON':
+          userBeaconEntry = null;
           renderObjects();
           break;
 
@@ -756,24 +941,93 @@
       }
     };
 
-    // Fallback for orphaned touchend (element recreated mid-gesture) — tap only.
-    // Long press is handled by the global setTimeout, so here we only fire taps.
-    window.addEventListener('touchend', function() {
-      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-      if (!longPressDownNoradId) return;
-      var sid = longPressDownNoradId;
-      longPressDownNoradId = null;
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
+    // ─── satellite card position loop ─────────────────────────────────────────
+    // Projects the pinned lat/lng/alt every frame so the card moves with the globe.
+    (function _cardLoop() {
+      if (pinnedCard && _satCardShown) {
+        var _el = document.getElementById('sat-card');
+        if (_el) {
+          var _cam    = world.camera();
+          var _pos3   = polar2Cart(pinnedCard.lat, pinnedCard.lng, pinnedCard.alt);
+          var _ndc    = _pos3.clone().project(_cam);
+          // Dot-product hemisphere check: more reliable than _ndc.z > 1.
+          // _ndc.z flips to large-negative (not > 1) when approaching the limb from the back,
+          // causing the card to get thrown to an extreme screen position.
+          var _camNorm = _cam.position.clone().normalize();
+          var _satNorm = _pos3.clone().normalize();
+          var _behind  = _camNorm.dot(_satNorm) < 0.0;
+          if (_behind !== _cardBehind) {
+            _cardBehind = _behind;
+            _el.style.visibility = _behind ? 'hidden' : 'visible';
+          }
+          if (!_behind) {
+            var _sx = (_ndc.x * 0.5 + 0.5) * window.innerWidth;
+            var _sy = (-_ndc.y * 0.5 + 0.5) * window.innerHeight;
+            _el.style.left = _sx + 'px';
+            _el.style.top  = _sy + 'px';
+          }
+        }
+      }
+      requestAnimationFrame(_cardLoop);
+    })();
+
+
+    // ─── global tap detection ─────────────────────────────────────────────────
+    // Capture-phase touchstart runs before any element's own touchstart.
+    // Proximity check ensures _touchedNoradId is set even when renderObjects()
+    // removed the satellite dot element before the touch reached it.
+    window.addEventListener('touchstart', function(e) {
+      if (e.touches.length !== 1) { _touchedNoradId = null; return; }
+      _tapStartX = e.touches[0].clientX;
+      _tapStartY = e.touches[0].clientY;
+      if (!objectsData.length || !world) return;
+      var tx = _tapStartX, ty = _tapStartY;
+      var HIT_R = 28;
+      var best = null, bestDist = Infinity;
+      var cam = world.camera();
+      var camNorm = cam.position.clone().normalize();
+      for (var i = 0; i < objectsData.length; i++) {
+        var sat  = objectsData[i];
+        if (sat.label === 'USER_BEACON') continue;
+        var p3   = polar2Cart(sat.lat, sat.lng, sat.alt);
+        if (camNorm.dot(p3.clone().normalize()) < 0) continue;
+        var ndc  = p3.clone().project(cam);
+        var sx   = (ndc.x * 0.5 + 0.5) * window.innerWidth;
+        var sy   = (-ndc.y * 0.5 + 0.5) * window.innerHeight;
+        var dist = Math.sqrt((tx - sx) * (tx - sx) + (ty - sy) * (ty - sy));
+        if (dist < HIT_R && dist < bestDist) { best = String(sat.label); bestDist = dist; }
+      }
+      _touchedNoradId = best;
+    }, { capture: true, passive: true });
+
+    // Single owner of SATELLITE_TAPPED and outside-card close logic.
+    window.addEventListener('touchend', function(e) {
+      var didMove = false;
+      if (e.changedTouches.length) {
+        var dx = e.changedTouches[0].clientX - _tapStartX;
+        var dy = e.changedTouches[0].clientY - _tapStartY;
+        didMove = Math.sqrt(dx * dx + dy * dy) > TAP_MAX_DRIFT;
+      }
+      if (didMove) { _touchedNoradId = null; return; }
+
+      if (_touchedNoradId) {
+        var sid = _touchedNoradId;
+        _touchedNoradId = null;
+        window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
           type: 'SATELLITE_TAPPED', payload: { noradId: sid },
+        }));
+      } else if (_satCardShown) {
+        // Tap on empty area while card is open — close unless the tap landed on the card itself.
+        var cardEl = document.getElementById('sat-card');
+        if (cardEl && cardEl.contains(e.target)) return;
+        window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'SAT_CARD_CLOSE',
         }));
       }
     }, { capture: true });
 
-    // Cancel long-press timer on OS-initiated touch cancellation.
     window.addEventListener('touchcancel', function() {
-      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-      longPressDownNoradId = null;
+      _touchedNoradId = null;
     }, { capture: true });
 
     window.addEventListener('message', function (event) {
