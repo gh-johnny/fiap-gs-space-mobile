@@ -20,8 +20,6 @@
   <img src="docs/assets/showcase.gif" alt="Orbital Guardian — demo" width="300" />
 </p>
 
-> GIF dos primeiros 30 segundos. Vídeo completo em [`docs/assets/showcase.mp4`](docs/assets/showcase.mp4).
-
 ---
 
 ## Índice
