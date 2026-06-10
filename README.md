@@ -4,6 +4,26 @@
 
 ---
 
+## Integrantes
+
+| Nome | RM |
+|------|----|
+| João Marcelo Furtado Romero | RM555199 |
+| André Nakamatsu Rocha | RM555004 |
+| Matheus Riveira Montovaneli | RM555499 |
+
+---
+
+## Showcase
+
+<p align="center">
+  <img src="docs/assets/showcase.gif" alt="Orbital Guardian — demo" width="300" />
+</p>
+
+> GIF dos primeiros 30 segundos. Vídeo completo em [`docs/assets/showcase.mp4`](docs/assets/showcase.mp4).
+
+---
+
 ## Índice
 
 1. [Visão Geral](#1-visão-geral)
